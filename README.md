@@ -8,4 +8,6 @@
   Run `npm i` to install the dependencies.
 
   Run `npm run dev` to start the development server.
-  
+
+  2026.04.21
+  본 프로젝트는 곤지암 만나교회 청년부 온라인 주보 프로젝트임을 알림
