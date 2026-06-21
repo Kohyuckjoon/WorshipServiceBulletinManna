@@ -3,7 +3,7 @@ import { db, auth } from '../firebase';
 import { doc, updateDoc, getDoc, setDoc, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 
-// ✅ 1. 데이터 타입 정의 (에러 방지의 핵심)
+// 데이터 타입 정의 (에러 방지의 핵심)
 export interface ChurchNewsItem {
     title: string;
     content: string;

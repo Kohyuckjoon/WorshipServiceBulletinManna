@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../../firebase'; // 설정파일
 import { doc, onSnapshot } from "firebase/firestore";
 import { Lock } from 'lucide-react';
-
+import { useNavigate } from 'react-router-dom';
 
 // Profile images import
 import imgPastor from "../../assets/23b6ea5c163050d8d7280dcdba4dd396a2a33a46.png";
@@ -31,6 +31,7 @@ import {
     X,
     ArrowUp,
     Phone,
+    Calendar
 } from 'lucide-react';
 
 // Background image import
@@ -152,6 +153,11 @@ export default function Home() {
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [activeSection, setActiveSection] = useState('home');
     const [bulletin, setBulletin] = useState<any>(null);
+    const navigate = useNavigate();
+
+    // 수련회 광고 배너
+    const [isRetreatModalOpen, setIsRetreatModalOpen] = useState(false);
+    const [isExpanding, setIsExpanding] = useState(false);
 
     const getWeekOfMonth = () => {
         const today = new Date();
@@ -270,28 +276,76 @@ export default function Home() {
     const monthYear = `${currentDate.getFullYear()}.${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
     const [isConfessionOpen, setIsConfessionOpen] = useState(false); // 공동체의 고백 상태 관리 
 
+    const handleRetreatClick = () => {
+        setIsExpanding(true);
+        setTimeout(() => {
+            navigate('/SummerCamp');
+        }, 350); // 0.35초 동안 시각적 확장 연출 후 최종 라우팅 이동
+    };
+
     return (
         <div className="bg-[#E8DDD5] text-slate-900 selection:bg-purple-200 pb-24">
+
+            <style>{`
+                @keyframes scaleUpOverlay {
+                    0% { transform: scale(0.96); opacity: 0; }
+                    40% { opacity: 0.95; }
+                    100% { transform: scale(1.05); opacity: 1; background: #F2F4F8; }
+                }
+                .animate-expand-route {
+                    animation: scaleUpOverlay 0.38s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                }
+            `}</style>
+
+            {/* 🔴 [추가] 클릭 시 토스 앱처럼 화면 가득 하얗고 부드럽게 덮어오는 리얼 머티리얼 모션 레이어 */}
+            {isExpanding && (
+                <div className="animate-expand-route fixed inset-0 z-[100] pointer-events-none" />
+            )}
+
             {/* Header */}
             <header className="sticky top-0 z-50 bg-[#8B7466] shadow-md w-full">
-                {/* max-w-md를 사용하여 컨텐츠들과 너비를 맞추고, 
-        justify-center 대신 justify-between을 쓰되 패딩으로 간격을 조절하는 게 더 예쁩니다. */}
                 <div className="max-w-md mx-auto px-6 h-16 flex items-center justify-between">
-                    {/* 좌측: 타이틀 */}
                     <h1 className="text-lg font-bold text-white font-[Arita_Dotum_KR] whitespace-nowrap">
                         곤지암 만나교회 청년부
                     </h1>
 
-                    {/* 우측: 관리자 접속 버튼 */}
                     <button
                         onClick={() => window.location.href = '/admin'}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/90 border border-white/20 transition-all active:scale-95"
                     >
                         <Lock size={12} className="opacity-80" />
-                        <span className="text-[10px] font-bold tracking-tight uppercase">Admin</span>
+                        <span className="text-[10px] font-bold tracking-tight uppercase font-[Arita_Dotum_KR]">Admin</span>
                     </button>
                 </div>
             </header>
+
+            <div className="sticky top-16 z-40 w-full bg-[#5D4A41] text-white shadow-md border-t border-white/5 font-[Arita_Dotum_KR]">
+                <div
+                    // onClick={() => setIsRetreatModalOpen(true)}
+                    onClick={handleRetreatClick} // 🔴 [수정] 무미건조한 즉시이동에서 모션 연동 헨들러로 스위칭
+                    className="max-w-md mx-auto px-5 py-3 flex items-center justify-between cursor-pointer active:bg-black/10 transition-colors"
+                    style={{
+                        transform: isExpanding ? 'scale(0.97)' : 'none',
+                        opacity: isExpanding ? 0.9 : 1
+                    }}
+                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
+                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="bg-[#D4C3B3]/20 p-2 rounded-xl">
+                            <Calendar size={18} className="text-[#EADCC9]" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] bg-[#C87A53] font-bold px-1.5 py-0.5 rounded text-white tracking-wider">공지</span>
+                                <p className="text-xs font-medium text-[#EADCC9] tracking-tight">2026 여름수련회 신청 안내</p>
+                            </div>
+                            <p className="text-sm font-bold text-white mt-0.5 tracking-tight">"나라가 임하시오며" — 자세히 보기</p>
+                        </div>
+                    </div>
+                    <ChevronRight size={18} className="text-white/40 group-hover:text-white transition-colors" />
+                </div>
+            </div>
 
             {/* Main Content */}
             <main className="px-4 pt-6 max-w-md mx-auto space-y-8">
