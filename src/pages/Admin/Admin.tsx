@@ -2,13 +2,12 @@ import { useAdminData } from '../../hooks/useAdminData';
 import {
     Calendar, Plus, Trash2, LogOut, Lock, CheckCircle2,
     AlertCircle, CalendarDays, Edit3, BookOpen, User, ChevronLeft, ChevronRight, RefreshCw,
-    GripVertical, MessageSquare, Quote, Eye, EyeOff, Check, Info
+    GripVertical, MessageSquare, Quote, Eye, EyeOff, Check, Info, Music
 } from "lucide-react";
 import LoginForm from './LoginForm';
 import React, { useState } from 'react';
 
 export default function Admin() {
-
     const [editingIdx, setEditingIdx] = useState<number | null>(null);
     const [editingApplyIdx, setEditingApplyIdx] = useState<number | null>(null);
     // const [preacher, setPreacher] = useState("");
@@ -28,6 +27,7 @@ export default function Admin() {
         fixedDate, date, setDate, scripture, setScripture, title, setTitle,
         preacher, setPreacher, benedictionBy, setBenedictionBy,
         newsInCharge, setNewsInCharge,
+        youtubeId, setYoutubeId,
 
         // 주보 상세 컨텐츠
         churchNews, setChurchNews, newNewsTitle, setNewNewsTitle, newNewsContent, setNewNewsContent,
@@ -511,6 +511,29 @@ export default function Admin() {
                                         onChange={(e) => setTitle(e.target.value)}
                                         placeholder="제목을 입력하세요"
                                         className="w-full min-h-[100px] bg-[#F9FAFB] border-0 rounded-[22px] p-5 text-[20px] font-black text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0] resize-none leading-relaxed"
+                                    />
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="p-8 rounded-[2.5rem] border-0 bg-white shadow-xl shadow-blue-500/5 transition-all animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <h2 className="text-2xl font-black mb-8 flex items-center gap-3 text-[#191F28] tracking-tight">
+                                <div className="w-2.5 h-8 bg-[#3182F6] rounded-full shadow-[0_0_12px_rgba(49,130,246,0.3)]"></div> 
+                                금주의 찬양
+                            </h2>
+                            <div className="space-y-4">
+                                <label className="text-[14px] font-black text-[#8B95A1] ml-1">유튜브 링크나 ID를 넣어주세요.</label>
+                                <div className="relative flex items-center">
+                                    {/* 아이콘을 입력창 안에 배치하거나 깔끔하게 구성 */}
+                                    <div className="absolute left-5 text-[#3182F6]">
+                                        <Music size={20} />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="유튜브 URL 주소를 입력하세요"
+                                        value={youtubeId}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setYoutubeId(e.target.value)}
+                                        className="w-full h-14 bg-[#F9FAFB] border-0 rounded-[18px] pl-14 pr-5 text-[16px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
                                     />
                                 </div>
                             </div>

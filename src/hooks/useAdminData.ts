@@ -42,6 +42,9 @@ export const useAdminData = () => {
     const [benedictionBy, setBenedictionBy] = useState("");
     const [loading, setLoading] = useState(false);
 
+    // youtube url
+    const [youtubeId, setYoutubeId] = useState("");
+
     // ✅ 2. 상태 정의 시 타입을 명시 (useState<타입[]>)
     const [churchNews, setChurchNews] = useState<ChurchNewsItem[]>([]);
     const [newNewsTitle, setNewNewsTitle] = useState("");
@@ -136,6 +139,7 @@ export const useAdminData = () => {
                         // 데이터가 없을 경우 기본값 세팅 방지 및 빈 문자열 처리
                         setPreacher(data.preacher || "");
                         setBenedictionBy(data.benedictionBy || "");
+                        setYoutubeId(data.youtubeId || "");
                         setChurchNews(data.churchNews || []);
                         setApplyQuestions(data.applyQuestions || []);
                         setShowApplyQuestions(data.showApplyQuestions !== undefined ? data.showApplyQuestions : true);
@@ -162,6 +166,7 @@ export const useAdminData = () => {
                 newsInCharge,
                 preacher,           // 설교자 저장
                 benedictionBy,      // 축도자 저장
+                youtubeId,
                 churchNews,
                 applyQuestions,
                 showApplyQuestions,
@@ -247,5 +252,6 @@ export const useAdminData = () => {
         handleDragStart, handleDragEnter, handleDragEnd, dragOverItem,
         preacher, setPreacher,
         benedictionBy, setBenedictionBy,
+        youtubeId, setYoutubeId,
     };
 };

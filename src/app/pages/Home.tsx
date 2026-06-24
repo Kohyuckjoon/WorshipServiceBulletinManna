@@ -310,7 +310,8 @@ export default function Home() {
                     </h1>
 
                     <button
-                        onClick={() => window.location.href = '/admin'}
+                        // onClick={() => window.location.href = '/admin'}
+                        onClick={() => window.open('/admin', '_blank', 'noopener,noreferrer')} // 새 탭으로 지원
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white/90 border border-white/20 transition-all active:scale-95"
                     >
                         <Lock size={12} className="opacity-80" />
@@ -822,16 +823,26 @@ export default function Home() {
                             </span>
                         </a>
                         <a
-                            href="https://www.youtube.com/@곤지암만나교회"
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            href="/worship"
                             className="bg-white p-4 rounded-2xl border border-[#9C8577]/20 flex flex-col items-center gap-2 shadow-sm active:scale-95 transition-transform"
                         >
                             <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500">
                                 <Youtube className="w-5 h-5" />
                             </div>
                             <span className="text-xs font-bold text-slate-700">
-                                유튜브 채널
+                                청년부 찬양 채널
+                            </span>
+                        </a>
+                        <a
+                            href="https://www.youtube.com/@곤지암만나교회"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="col-span-2 bg-white p-4 rounded-2xl border border-[#9C8577]/20 flex flex-col items-center gap-2 shadow-sm active:scale-95 transition-transform">
+                            <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500">
+                                <Youtube className="w-5 h-5" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-700">
+                                곤지암 만나교회 채널
                             </span>
                         </a>
                     </div>

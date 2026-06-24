@@ -839,6 +839,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Admin from '../pages/Admin/Admin';
 import Summer from './pages/Summer';
+import Worship from './pages/Worship';
 
 export default function App() {
   return (
@@ -847,6 +848,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/SummerCamp" element={<Summer />} />
+        <Route path="/worship" element={<Worship />} />
       </Routes>
     </BrowserRouter>
   );
