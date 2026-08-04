@@ -8,6 +8,10 @@
     ],
     "rewrites": [
       {
+        "source": "/SummerCamp",
+        "destination": "/summercamp.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

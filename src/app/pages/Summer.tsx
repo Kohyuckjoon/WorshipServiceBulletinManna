@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function App() {
     // 🔴 실시간 남은 시간 상태 관리 (서울 시간 기준 카운트다운용)
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isOver: false });
+
+    // 🔴 카카오톡 공유 미리보기용 정적 페이지(/summercamp.html)를 거쳐 들어온 경우
+    // 주소창을 원래 경로(/SummerCamp)로 조용히 정리 (서버 요청 없이 클라이언트에서만 처리)
+    const navigate = useNavigate();
+    const location = useLocation();
+    useEffect(() => {
+        if (location.pathname === '/summercamp-app') {
+            navigate('/SummerCamp', { replace: true });
+        }
+    }, [location.pathname, navigate]);
 
     useEffect(() => {
         // 🔴 서울 시간대 기준 실시간 카운트다운 계산 로직 함수
@@ -53,7 +64,7 @@ export default function App() {
                 alignItems: "center",
                 justifyContent: "center",
                 padding: "20px",
-                fontFamily: "'Noto Sans KR', -apple-system, sans-serif",
+                fontFamily: "'Malgun Gothic', 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, sans-serif",
                 color: "#191F28",
                 position: "relative"
             }}
@@ -73,6 +84,24 @@ export default function App() {
                 }
                 .glow-pulse-box {
                     animation: pulseGlow 2.5s infinite ease-in-out;
+                }
+                @keyframes pulseGlowBlue {
+                    0% {
+                        box-shadow: 0 0 0 0 rgba(26, 102, 219, 0.25), 0 2px 8px rgba(26, 102, 219, 0.08);
+                        transform: scale(1);
+                    }
+                    50% {
+                        box-shadow: 0 0 0 7px rgba(26, 102, 219, 0.05), 0 4px 16px rgba(26, 102, 219, 0.3);
+                        transform: scale(1.04);
+                    }
+                    100% {
+                        box-shadow: 0 0 0 0 rgba(26, 102, 219, 0.0), 0 2px 8px rgba(26, 102, 219, 0.08);
+                        transform: scale(1);
+                    }
+                }
+                .glow-pulse-badge {
+                    display: inline-block;
+                    animation: pulseGlowBlue 2s infinite ease-in-out;
                 }
             `}</style>
 
@@ -153,7 +182,7 @@ export default function App() {
                         position: "relative",
                         textAlign: "center",
                         borderBottom: "1px solid #F2F4F6",
-                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif"
+                        fontFamily: "'Malgun Gothic', 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, sans-serif"
                     }}
                 >
                     {/* 배지 디자인 */}
@@ -196,7 +225,7 @@ export default function App() {
                             fontWeight: 700,
                             color: timeLeft.isOver ? "#8B95A1" : "#F04452",
                             letterSpacing: "-0.03em",
-                            fontFamily: "-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif"
+                            fontFamily: "'Malgun Gothic', 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, sans-serif"
                         }}>
                             {timeLeft.isOver ? (
                                 "수련회 신청이 마감되었습니다"
@@ -376,6 +405,97 @@ export default function App() {
                                 )}
                             </div>
                         ))}
+
+                        {/* 준비물 카드 (전용 레이아웃) */}
+                        <div
+                            style={{
+                                display: "flex",
+                                alignItems: "flex-start",
+                                padding: "18px 20px",
+                                background: "#F9FAFB",
+                                borderRadius: "20px",
+                                gap: "16px",
+                                border: "1px solid #F2F4F6",
+                            }}
+                        >
+                            <div style={{ fontSize: "20px", background: "#EBF4FF", width: "44px", height: "44px", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "14px", flexShrink: 0 }}>
+                                <span style={{ width: "100%", textAlign: "center" }}>🎒</span>
+                            </div>
+
+                            <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: "13px", fontWeight: 600, color: "#8B95A1", marginBottom: "3px" }}>준비물</div>
+                                <div style={{ fontSize: "16px", fontWeight: 700, color: "#191F28", letterSpacing: "-0.01em", lineHeight: "2.1" }}>
+                                    <span
+                                        className="glow-pulse-badge"
+                                        style={{
+                                            color: "#1A66DB",
+                                            fontWeight: 900,
+                                            fontSize: "1.05em",
+                                            background: "#E8F3FF",
+                                            padding: "3px 9px",
+                                            borderRadius: "8px",
+                                        }}
+                                    >
+                                        경량 침낭(또는 침구류)
+                                    </span>{" "}
+                                    · 성경책 · 여벌옷 · 속옷 · 세면도구 · 수건 · 필기구 · 개인상비약
+                                </div>
+
+                                <div style={{ fontSize: "13px", fontWeight: 600, color: "#F04452", marginTop: "6px", lineHeight: "1.4" }}>
+                                    ⚠️ 캐리어 반입 금지
+                                </div>
+                                <div style={{ fontSize: "12.5px", fontWeight: 500, color: "#8B95A1", marginTop: "4px", lineHeight: "1.5" }}>
+                                    침낭 구매는 필수는 아니지만, 안정적인 취침을 위해 권장합니다.
+                                </div>
+
+                                <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                                    <button
+                                        onClick={() => window.open("https://www.coupang.com/vp/products/8901910231?itemId=25995420502&vendorItemId=92977675486&pickType=COU_PICK&q=%EC%B9%A8%EB%82%AD&searchId=7dbd176d1310649&sourceType=search&itemsCount=36&searchRank=0&rank=0&traceId=mse65u28", "_blank", "noopener,noreferrer")}
+                                        style={{
+                                            flex: 1,
+                                            padding: "10px 8px",
+                                            background: "#FFFFFF",
+                                            border: "1px solid #E5E8EB",
+                                            borderRadius: "12px",
+                                            fontSize: "12.5px",
+                                            fontWeight: 700,
+                                            color: "#1A66DB",
+                                            cursor: "pointer",
+                                            textAlign: "center",
+                                            lineHeight: "1.4",
+                                            transition: "transform 0.1s ease"
+                                        }}
+                                        onMouseDown={(e) => e.currentTarget.style.transform = "scale(0.97)"}
+                                        onMouseUp={(e) => e.currentTarget.style.transform = "scale(1)"}
+                                    >
+                                        침낭 구매하기<br />
+                                        <span style={{ fontWeight: 500, color: "#8B95A1" }}>1만원대</span>
+                                    </button>
+                                    <button
+                                        onClick={() => window.open("https://www.coupang.com/vp/products/7986503239?itemId=22185756037&vendorItemId=89232040715&q=%EC%B9%A8%EB%82%AD&searchId=7dbd176d1310649&sourceType=search&itemsCount=36&searchRank=3&rank=3&traceId=mse66xmy", "_blank", "noopener,noreferrer")}
+                                        style={{
+                                            flex: 1,
+                                            padding: "10px 8px",
+                                            background: "#FFFFFF",
+                                            border: "1px solid #E5E8EB",
+                                            borderRadius: "12px",
+                                            fontSize: "12.5px",
+                                            fontWeight: 700,
+                                            color: "#1A66DB",
+                                            cursor: "pointer",
+                                            textAlign: "center",
+                                            lineHeight: "1.4",
+                                            transition: "transform 0.1s ease"
+                                        }}
+                                        onMouseDown={(e) => e.currentTarget.style.transform = "scale(0.97)"}
+                                        onMouseUp={(e) => e.currentTarget.style.transform = "scale(1)"}
+                                    >
+                                        침낭 구매하기<br />
+                                        <span style={{ fontWeight: 500, color: "#8B95A1" }}>3만원 미만대</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* 신청서 작성하기 버튼 */}
