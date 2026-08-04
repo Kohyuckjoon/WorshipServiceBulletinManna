@@ -159,6 +159,21 @@ export default function Home() {
     const [isRetreatModalOpen, setIsRetreatModalOpen] = useState(false);
     const [isExpanding, setIsExpanding] = useState(false);
 
+    // 광고 배너 링크 선택 시트
+    const [showBannerLinkPicker, setShowBannerLinkPicker] = useState(false);
+
+    const handleBannerClick = () => {
+        // adBannerLinks(신규 배열)가 없고 예전 단일 링크(adBannerLinkUrl)만 저장되어 있는 경우 대비
+        const links = bulletin?.adBannerLinks?.length > 0
+            ? bulletin.adBannerLinks
+            : (bulletin?.adBannerLinkUrl ? [{ label: '', url: bulletin.adBannerLinkUrl }] : []);
+        if (links.length === 1) {
+            window.open(links[0].url, '_blank', 'noopener,noreferrer');
+        } else if (links.length > 1) {
+            setShowBannerLinkPicker(true);
+        }
+    };
+
     const getWeekOfMonth = () => {
         const today = new Date();
         const year = today.getFullYear();
@@ -320,6 +335,8 @@ export default function Home() {
                 </div>
             </header>
 
+            
+
             <div className="sticky top-16 z-40 w-full bg-[#5D4A41] text-white shadow-md border-t border-white/5 font-[Arita_Dotum_KR]">
                 <div
                     // onClick={() => setIsRetreatModalOpen(true)}
@@ -347,6 +364,29 @@ export default function Home() {
                     <ChevronRight size={18} className="text-white/40 group-hover:text-white transition-colors" />
                 </div>
             </div>
+
+            {bulletin?.adBannerEnabled && bulletin?.adBannerTitle && (
+                <div className="max-w-md mx-auto px-4 pt-4">
+                    <button
+                        onClick={handleBannerClick}
+                        className="relative w-full bg-[#8B7466] rounded-2xl shadow-lg p-5 flex items-center justify-between gap-3 text-left active:scale-[0.98] transition-transform"
+                    >
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-1.5 h-10 bg-[#C87A53] rounded-full shrink-0"></div>
+                            <div className="min-w-0">
+                                <p className="font-black text-white text-[15px] truncate font-[Arita_Dotum_KR]">{bulletin.adBannerTitle}</p>
+                                {bulletin.adBannerDescription && (
+                                    <p className="text-[#EADCC9] text-[12px] font-medium truncate font-[Arita_Dotum_KR] mt-0.5">{bulletin.adBannerDescription}</p>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <span className="bg-[#C87A53] text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">AD</span>
+                            <ChevronRight size={16} className="text-white/40" />
+                        </div>
+                    </button>
+                </div>
+            )}
 
             {/* Main Content */}
             <main className="px-4 pt-6 max-w-md mx-auto space-y-8">
@@ -497,6 +537,47 @@ export default function Home() {
                                     >
                                         닫기
                                     </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 광고 배너 링크 선택 시트 (링크가 2개 이상일 때만 사용) */}
+                        {showBannerLinkPicker && bulletin?.adBannerLinks?.length > 1 && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center px-6">
+                                <div
+                                    className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                                    onClick={() => setShowBannerLinkPicker(false)}
+                                />
+                                <div className="relative bg-[#F2EFE1] w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl animate-in fade-in zoom-in duration-200">
+                                    <header className="flex justify-between items-center mb-6">
+                                        <h2 className="text-xl font-bold text-[#4A3528] font-[Arita_Dotum_KR]">
+                                            {bulletin.adBannerTitle}
+                                        </h2>
+                                        <button
+                                            onClick={() => setShowBannerLinkPicker(false)}
+                                            className="text-[#8B7456] p-1 hover:bg-black/5 rounded-full transition-colors"
+                                        >
+                                            <X size={24} />
+                                        </button>
+                                    </header>
+
+                                    <div className="space-y-3">
+                                        {bulletin.adBannerLinks.map((link: { label: string; url: string }, idx: number) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => {
+                                                    window.open(link.url, '_blank', 'noopener,noreferrer');
+                                                    setShowBannerLinkPicker(false);
+                                                }}
+                                                className="w-full bg-white rounded-2xl p-4 flex items-center justify-between text-left border border-[#9C8577]/20 active:scale-[0.98] transition-transform"
+                                            >
+                                                <span className="font-bold text-[#4A3528] font-[Arita_Dotum_KR]">
+                                                    {link.label || `링크 ${idx + 1}`}
+                                                </span>
+                                                <ChevronRight size={18} className="text-[#9C8577]" />
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -830,7 +911,7 @@ export default function Home() {
                                 <Youtube className="w-5 h-5" />
                             </div>
                             <span className="text-xs font-bold text-slate-700">
-                                청년부 찬양 채널
+                                이번주 찬양 듣기
                             </span>
                         </a>
                         <a
@@ -850,7 +931,7 @@ export default function Home() {
 
                 <footer className="text-center py-12">
                     <p className="text-[#9C8577] text-[10px] font-medium">섬김으로 하나님 나라를 세워가는 만나 청년부</p>
-                    <p className="text-[#9C8577] text-[10px] font-medium">모바일 / 온라인 주보 문의 : 010-9231-1175</p>
+                    <p className="text-[#9C8577] text-[10px] font-medium">모바일 / 온라인 주보 문의 : 0502-1937-0615</p>
                 </footer>
             </main>
 

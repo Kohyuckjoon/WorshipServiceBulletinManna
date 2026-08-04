@@ -29,14 +29,18 @@ export default function Worship() {
         fetchUrl();
     }, []);
 
+    useEffect(() => {
+        console.log("현재 youtubeUrl 값:", youtubeUrl);
+    }, [youtubeUrl]);
+
     return (
         <div className="min-h-screen bg-[#F2F4F6] p-6 flex flex-col items-center justify-center">
             <div className="max-w-md w-full bg-white p-8 rounded-[32px] shadow-lg border border-[#F2F4F6] text-center">
                 <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Youtube className="w-10 h-10 text-red-500" />
                 </div>
-                <h1 className="text-2xl font-black text-[#191F28] mb-2">만나교회 청년부 찬양 채널</h1>
-                <p className="text-[#8B95A1] font-bold mb-8">주님의 은혜가 가득한 찬양의 자리로 초대합니다.</p>
+                <h1 className="text-2xl font-black text-[#191F28] mb-2">곤지암 만나교회<br></br>이번주 찬양 듣기</h1>
+                <p className="text-[#8B95A1] font-bold mb-8">주님의 은혜가 가득한<br></br>자리로 여러분을 초대합니다.</p>
                 
                 {/* [수정] href에 고정 주소 대신 youtubeUrl 상태값을 연결 */}
                 {/* <a

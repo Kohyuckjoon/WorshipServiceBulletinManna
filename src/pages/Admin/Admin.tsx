@@ -2,7 +2,7 @@ import { useAdminData } from '../../hooks/useAdminData';
 import {
     Calendar, Plus, Trash2, LogOut, Lock, CheckCircle2,
     AlertCircle, CalendarDays, Edit3, BookOpen, User, ChevronLeft, ChevronRight, RefreshCw,
-    GripVertical, MessageSquare, Quote, Eye, EyeOff, Check, Info, Music
+    GripVertical, MessageSquare, Quote, Eye, EyeOff, Check, Info, Music, Megaphone, Link2
 } from "lucide-react";
 import LoginForm from './LoginForm';
 import React, { useState } from 'react';
@@ -28,6 +28,12 @@ export default function Admin() {
         preacher, setPreacher, benedictionBy, setBenedictionBy,
         newsInCharge, setNewsInCharge,
         youtubeId, setYoutubeId,
+        adBannerEnabled, setAdBannerEnabled,
+        adBannerTitle, setAdBannerTitle,
+        adBannerDescription, setAdBannerDescription,
+        adBannerLinks, setAdBannerLinks,
+        newBannerLinkLabel, setNewBannerLinkLabel,
+        newBannerLinkUrl, setNewBannerLinkUrl,
 
         // 주보 상세 컨텐츠
         churchNews, setChurchNews, newNewsTitle, setNewNewsTitle, newNewsContent, setNewNewsContent,
@@ -538,6 +544,146 @@ export default function Admin() {
                                 </div>
                             </div>
                         </section>
+
+                        {/* 광고 배너 섹션 */}
+                        <section className="p-8 rounded-[2.5rem] border-0 bg-white shadow-xl shadow-blue-500/5 transition-all animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <header className="flex items-center justify-between mb-8">
+                                <h2 className="text-2xl font-black flex items-center gap-3 text-[#191F28] tracking-tight">
+                                    <div className="w-2.5 h-8 bg-[#3182F6] rounded-full shadow-[0_0_12px_rgba(49,130,246,0.3)]"></div>
+                                    광고 배너
+                                    <Megaphone size={20} strokeWidth={3} className="text-[#3182F6] opacity-50" />
+                                </h2>
+                                <div className="flex items-center gap-3 bg-[#F9FAFB] px-4 py-2 rounded-full border border-[#F2F4F6]">
+                                    <span className={`text-[13px] font-black transition-colors ${adBannerEnabled ? 'text-[#3182F6]' : 'text-[#8B95A1]'}`}>
+                                        {adBannerEnabled ? '사용중' : '사용안함'}
+                                    </span>
+                                    <button
+                                        onClick={() => setAdBannerEnabled(!adBannerEnabled)}
+                                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${adBannerEnabled ? 'bg-[#3182F6]' : 'bg-[#E5E8EB]'}`}
+                                    >
+                                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-all duration-300 ${adBannerEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                    </button>
+                                </div>
+                            </header>
+
+                            <div className={`space-y-6 transition-all duration-500 ${adBannerEnabled ? 'opacity-100' : 'opacity-30 grayscale pointer-events-none'}`}>
+                                <div className="space-y-3 group">
+                                    <label className="text-[14px] font-black text-[#8B95A1] group-focus-within:text-[#3182F6] transition-colors ml-1">
+                                        배너 제목
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={adBannerTitle}
+                                        onChange={(e) => setAdBannerTitle(e.target.value)}
+                                        placeholder="예: 2026 여름 수련회 신청 안내"
+                                        className="w-full h-14 bg-[#F9FAFB] border-0 rounded-[18px] px-5 text-[16px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                    />
+                                </div>
+
+                                <div className="space-y-3 group">
+                                    <label className="text-[14px] font-black text-[#8B95A1] group-focus-within:text-[#3182F6] transition-colors ml-1">
+                                        배너 설명 (선택)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={adBannerDescription}
+                                        onChange={(e) => setAdBannerDescription(e.target.value)}
+                                        placeholder="예: 지금 바로 신청하세요"
+                                        className="w-full h-14 bg-[#F9FAFB] border-0 rounded-[18px] px-5 text-[16px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                    />
+                                </div>
+
+                                <div className="space-y-3 group">
+                                    <label className="text-[14px] font-black text-[#8B95A1] group-focus-within:text-[#3182F6] transition-colors ml-1 flex items-center gap-2">
+                                        <Link2 size={14} strokeWidth={3} className="text-[#3182F6]" />
+                                        이동할 링크 목록
+                                    </label>
+                                    <p className="text-[12px] font-medium text-[#ADB5BD] ml-1 -mt-1 mb-1">
+                                        링크가 1개면 배너 클릭 시 바로 이동하고, 2개 이상이면 목록에서 선택하는 화면이 뜹니다.
+                                    </p>
+
+                                    {adBannerLinks.length > 0 && (
+                                        <div className="space-y-3">
+                                            {adBannerLinks.map((link, idx) => (
+                                                <div key={idx} className="flex items-center gap-2 bg-[#F9FAFB] p-3 rounded-[16px] ring-1 ring-[#F2F4F6]">
+                                                    <div className="flex-1 space-y-2">
+                                                        <input
+                                                            type="text"
+                                                            value={link.label}
+                                                            onChange={(e) => {
+                                                                const updated = [...adBannerLinks];
+                                                                updated[idx] = { ...updated[idx], label: e.target.value };
+                                                                setAdBannerLinks(updated);
+                                                            }}
+                                                            placeholder="라벨 (예: 1일차 집회)"
+                                                            className="w-full h-10 bg-white border-0 ring-1 ring-[#E5E8EB] px-3 rounded-[10px] outline-none focus:ring-2 focus:ring-[#3182F6] font-bold text-[13px] text-[#191F28] placeholder:text-[#D1D8E0]"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={link.url}
+                                                            onChange={(e) => {
+                                                                const updated = [...adBannerLinks];
+                                                                updated[idx] = { ...updated[idx], url: e.target.value };
+                                                                setAdBannerLinks(updated);
+                                                            }}
+                                                            placeholder="https://..."
+                                                            className="w-full h-10 bg-white border-0 ring-1 ring-[#E5E8EB] px-3 rounded-[10px] outline-none focus:ring-2 focus:ring-[#3182F6] font-bold text-[13px] text-[#4E5968] placeholder:text-[#D1D8E0]"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setAdBannerLinks(adBannerLinks.filter((_, i) => i !== idx))}
+                                                        className="w-10 h-10 flex items-center justify-center text-[#F04452] hover:bg-[#FFF0F1] rounded-full transition-all shrink-0"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-end gap-2 pt-1">
+                                        <div className="flex-1 space-y-2">
+                                            <input
+                                                type="text"
+                                                value={newBannerLinkLabel}
+                                                onChange={(e) => setNewBannerLinkLabel(e.target.value)}
+                                                placeholder="라벨 (선택, 예: 2일차 집회)"
+                                                className="w-full h-12 bg-[#F9FAFB] border-0 rounded-[14px] px-4 text-[14px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={newBannerLinkUrl}
+                                                onChange={(e) => setNewBannerLinkUrl(e.target.value)}
+                                                placeholder="https://..."
+                                                className="w-full h-12 bg-[#F9FAFB] border-0 rounded-[14px] px-4 text-[14px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                if (!newBannerLinkUrl.trim()) return;
+                                                setAdBannerLinks([...adBannerLinks, { label: newBannerLinkLabel.trim(), url: newBannerLinkUrl.trim() }]);
+                                                setNewBannerLinkLabel("");
+                                                setNewBannerLinkUrl("");
+                                            }}
+                                            className="h-12 px-4 bg-[#3182F6] text-white rounded-[14px] font-black text-[14px] flex items-center justify-center gap-1 active:scale-[0.98] hover:bg-[#1B64DA] transition-all shrink-0"
+                                        >
+                                            <Plus size={18} strokeWidth={3} />
+                                            추가
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-2 px-2">
+                                    <div className="w-5 h-5 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <span className="text-[#3182F6] text-[10px] font-black">TIP</span>
+                                    </div>
+                                    <p className="text-[12px] font-medium text-[#ADB5BD] leading-snug">
+                                        사용 토글을 켜고 배너 제목을 입력하면 메인 화면 헤더 바로 아래에 배너가 노출되며, 클릭 시 새 탭에서 링크로 이동합니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
                         {/* 3. 신앙고백 및 예배자의 고백 (Grouped Card) */}
                         <div className="grid grid-cols-1 gap-6">
                             <section className="p-8 rounded-[2.5rem] border-0 bg-white shadow-xl shadow-blue-500/5 transition-all animate-in fade-in slide-in-from-bottom-4 duration-500">

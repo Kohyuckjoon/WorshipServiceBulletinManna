@@ -15,6 +15,11 @@ export interface ApplyQuestionItem {
     content: string;
 }
 
+export interface AdBannerLinkItem {
+    label: string;
+    url: string;
+}
+
 export const useAdminData = () => {
     const [user, setUser] = useState<any>(null);
     const [showLoginSuccess, setShowLoginSuccess] = useState(false);
@@ -44,6 +49,14 @@ export const useAdminData = () => {
 
     // youtube url
     const [youtubeId, setYoutubeId] = useState("");
+
+    // 광고 배너
+    const [adBannerEnabled, setAdBannerEnabled] = useState(false);
+    const [adBannerTitle, setAdBannerTitle] = useState("");
+    const [adBannerDescription, setAdBannerDescription] = useState("");
+    const [adBannerLinks, setAdBannerLinks] = useState<AdBannerLinkItem[]>([]);
+    const [newBannerLinkLabel, setNewBannerLinkLabel] = useState("");
+    const [newBannerLinkUrl, setNewBannerLinkUrl] = useState("");
 
     // ✅ 2. 상태 정의 시 타입을 명시 (useState<타입[]>)
     const [churchNews, setChurchNews] = useState<ChurchNewsItem[]>([]);
@@ -146,6 +159,17 @@ export const useAdminData = () => {
                         setApostlesCreed(data.apostlesCreed || "");
                         setPsalms(data.psalms || "");
                         setWorshipperConfession(data.worshipperConfession || "");
+                        setAdBannerEnabled(data.adBannerEnabled || false);
+                        setAdBannerTitle(data.adBannerTitle || "");
+                        setAdBannerDescription(data.adBannerDescription || "");
+                        // adBannerLinks가 없고 예전 단일 링크(adBannerLinkUrl)만 있는 경우 자동 이관
+                        if (data.adBannerLinks && data.adBannerLinks.length > 0) {
+                            setAdBannerLinks(data.adBannerLinks);
+                        } else if (data.adBannerLinkUrl) {
+                            setAdBannerLinks([{ label: "", url: data.adBannerLinkUrl }]);
+                        } else {
+                            setAdBannerLinks([]);
+                        }
                     }
                 } catch (error) { console.error(error); }
             };
@@ -173,6 +197,10 @@ export const useAdminData = () => {
                 worshipperConfession,
                 apostlesCreed,
                 psalms,
+                adBannerEnabled,
+                adBannerTitle,
+                adBannerDescription,
+                adBannerLinks,
                 updatedAt: new Date()
             };
 
@@ -253,5 +281,11 @@ export const useAdminData = () => {
         preacher, setPreacher,
         benedictionBy, setBenedictionBy,
         youtubeId, setYoutubeId,
+        adBannerEnabled, setAdBannerEnabled,
+        adBannerTitle, setAdBannerTitle,
+        adBannerDescription, setAdBannerDescription,
+        adBannerLinks, setAdBannerLinks,
+        newBannerLinkLabel, setNewBannerLinkLabel,
+        newBannerLinkUrl, setNewBannerLinkUrl,
     };
 };
