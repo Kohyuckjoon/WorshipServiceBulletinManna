@@ -27,6 +27,7 @@ export default function App() {
     const [retreatContact, setRetreatContact] = useState("회장 010-3180-6322");
     const [retreatItems, setRetreatItems] = useState("경량 침낭(또는 침구류), 성경책, 여벌옷, 속옷, 세면도구, 수건, 필기구, 개인상비약");
     const [retreatCaution, setRetreatCaution] = useState("캐리어 반입 금지");
+    const [retreatApplyUrl, setRetreatApplyUrl] = useState("https://docs.google.com/forms/d/e/1FAIpQLSf-DKv1q5i6zsNiWOSRJ14IAsUrPvxzX2zyh5ygF0EeibxYog/viewform");
 
     useEffect(() => {
         const unsub = onSnapshot(doc(db, "retreat", "summercamp"), (snap) => {
@@ -45,6 +46,7 @@ export default function App() {
                 if (data.retreatContact) setRetreatContact(data.retreatContact);
                 if (data.retreatItems) setRetreatItems(data.retreatItems);
                 if (data.retreatCaution) setRetreatCaution(data.retreatCaution);
+                if (data.retreatApplyUrl) setRetreatApplyUrl(data.retreatApplyUrl);
             }
         });
         return () => unsub();
@@ -704,7 +706,7 @@ export default function App() {
                     {/* 신청서 작성하기 버튼 */}
                     {activeTab === "apply" && (
                     <button
-                        onClick={() => window.open("https://docs.google.com/forms/d/e/1FAIpQLSf-DKv1q5i6zsNiWOSRJ14IAsUrPvxzX2zyh5ygF0EeibxYog/viewform", "_blank", "noopener,noreferrer")}
+                        onClick={() => window.open(retreatApplyUrl, "_blank", "noopener,noreferrer")}
                         style={{
                             width: "100%",
                             height: "60px",

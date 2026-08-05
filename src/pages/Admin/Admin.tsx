@@ -83,6 +83,7 @@ export default function Admin() {
     const [retreatContact, setRetreatContact] = useState("회장 010-3180-6322");
     const [retreatItems, setRetreatItems] = useState("경량 침낭(또는 침구류), 성경책, 여벌옷, 속옷, 세면도구, 수건, 필기구, 개인상비약");
     const [retreatCaution, setRetreatCaution] = useState("캐리어 반입 금지");
+    const [retreatApplyUrl, setRetreatApplyUrl] = useState("https://docs.google.com/forms/d/e/1FAIpQLSf-DKv1q5i6zsNiWOSRJ14IAsUrPvxzX2zyh5ygF0EeibxYog/viewform");
 
     const {
         // 사용자 및 상태
@@ -143,6 +144,7 @@ export default function Admin() {
                     if (data.retreatContact) setRetreatContact(data.retreatContact);
                     if (data.retreatItems) setRetreatItems(data.retreatItems);
                     if (data.retreatCaution) setRetreatCaution(data.retreatCaution);
+                    if (data.retreatApplyUrl) setRetreatApplyUrl(data.retreatApplyUrl);
                 }
             } catch (err) {
                 console.error("포스터 로드 실패:", err);
@@ -215,6 +217,7 @@ export default function Admin() {
                 retreatContact,
                 retreatItems,
                 retreatCaution,
+                retreatApplyUrl,
                 updatedAt: new Date()
             }, { merge: true });
             setPosterSaved(true);
@@ -1001,6 +1004,20 @@ export default function Admin() {
                                         placeholder="예: 캐리어 반입 금지"
                                         className="w-full h-14 bg-[#F9FAFB] border-0 rounded-[18px] px-5 text-[16px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
                                     />
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[14px] font-black text-[#8B95A1] ml-1">📝 신청서 링크</label>
+                                    <input
+                                        type="text"
+                                        value={retreatApplyUrl}
+                                        onChange={(e) => setRetreatApplyUrl(e.target.value)}
+                                        placeholder="https://docs.google.com/forms/..."
+                                        className="w-full h-14 bg-[#F9FAFB] border-0 rounded-[18px] px-5 text-[16px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                    />
+                                    <p className="text-[11.5px] font-medium text-[#ADB5BD] leading-snug px-1">
+                                        "수련회 신청서 작성하기" 버튼을 누르면 이 링크로 이동해요.
+                                    </p>
                                 </div>
 
                                 <div className="space-y-3">
