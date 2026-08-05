@@ -158,6 +158,7 @@ export default function Home() {
     // 수련회 광고 배너
     const [isRetreatModalOpen, setIsRetreatModalOpen] = useState(false);
     const [isExpanding, setIsExpanding] = useState(false);
+    const [retreatEnabled, setRetreatEnabled] = useState(true);
 
     // 광고 배너 링크 선택 시트
     const [showBannerLinkPicker, setShowBannerLinkPicker] = useState(false);
@@ -246,6 +247,17 @@ export default function Home() {
             window.removeEventListener('scroll', handleScroll);
             unsub(); // Firebase 연결 끊기
         };
+    }, []);
+
+    useEffect(() => {
+        // 수련회 안내 사용 여부 실시간 반영 (관리자 페이지 토글)
+        const unsubRetreat = onSnapshot(doc(db, "retreat", "summercamp"), (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setRetreatEnabled(data.retreatEnabled !== undefined ? data.retreatEnabled : true);
+            }
+        });
+        return () => unsubRetreat();
     }, []);
 
     const scrollToSection = (id: string) => {
@@ -337,6 +349,7 @@ export default function Home() {
 
             
 
+            {retreatEnabled && (
             <div className="sticky top-16 z-40 w-full bg-[#5D4A41] text-white shadow-md border-t border-white/5 font-[Arita_Dotum_KR]">
                 <div
                     // onClick={() => setIsRetreatModalOpen(true)}
@@ -364,6 +377,7 @@ export default function Home() {
                     <ChevronRight size={18} className="text-white/40 group-hover:text-white transition-colors" />
                 </div>
             </div>
+            )}
 
             {bulletin?.adBannerEnabled && bulletin?.adBannerTitle && (
                 <div className="max-w-md mx-auto px-4 pt-4">

@@ -27,7 +27,16 @@ export default function LoginForm({
     const fontStack = "font-['Malgun_Gothic', '맑은_고딕', 'Apple_SD_Gothic_Neo', 'sans-serif']";
 
     return (
-        <div className={`min-h-screen bg-[#F2F4F6] flex items-center justify-center p-5 ${fontStack} tracking-tight text-[#191F28]`}>
+        <div className={`admin-malgun min-h-screen bg-[#F2F4F6] flex items-center justify-center p-5 ${fontStack} tracking-tight text-[#191F28]`}>
+            {/* 🔴 theme.css의 @layer base가 input/h1-h4/p/label/button/span에 'Arita Buri'를 직접 지정해서
+                상위 요소의 폰트 지정을 덮어써버리는 문제를 로그인 화면 안에서만 무력화 */}
+            <style>{`
+                .admin-malgun, .admin-malgun input, .admin-malgun textarea, .admin-malgun select,
+                .admin-malgun button, .admin-malgun label, .admin-malgun span, .admin-malgun p,
+                .admin-malgun h1, .admin-malgun h2, .admin-malgun h3, .admin-malgun h4 {
+                    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', dotum, sans-serif;
+                }
+            `}</style>
 
             {showLoginError && (
                 <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-40px)] max-w-[380px] animate-in slide-in-from-top-5 duration-300">

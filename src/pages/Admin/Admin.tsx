@@ -2,16 +2,87 @@ import { useAdminData } from '../../hooks/useAdminData';
 import {
     Calendar, Plus, Trash2, LogOut, Lock, CheckCircle2,
     AlertCircle, CalendarDays, Edit3, BookOpen, User, ChevronLeft, ChevronRight, RefreshCw,
-    GripVertical, MessageSquare, Quote, Eye, EyeOff, Check, Info, Music, Megaphone, Link2
+    GripVertical, MessageSquare, Quote, Eye, EyeOff, Check, Info, Music, Megaphone, Link2, Image
 } from "lucide-react";
 import LoginForm from './LoginForm';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../../firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
+// 🔴 이미지를 Firestore 문서에 그대로 저장할 수 있도록 브라우저에서 리사이즈+압축 (Storage 미사용, 완전 무료)
+const compressImageToDataUrl = (file: File, maxBytes = 700000): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const img = new window.Image();
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+                const maxDimension = 1200;
+                if (width > maxDimension || height > maxDimension) {
+                    if (width > height) {
+                        height = Math.round((height * maxDimension) / width);
+                        width = maxDimension;
+                    } else {
+                        width = Math.round((width * maxDimension) / height);
+                        height = maxDimension;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) { reject(new Error('캔버스를 생성할 수 없습니다.')); return; }
+                ctx.drawImage(img, 0, 0, width, height);
+
+                let quality = 0.85;
+                let dataUrl = canvas.toDataURL('image/jpeg', quality);
+                while (dataUrl.length > maxBytes && quality > 0.3) {
+                    quality -= 0.1;
+                    dataUrl = canvas.toDataURL('image/jpeg', quality);
+                }
+                resolve(dataUrl);
+            };
+            img.onerror = () => reject(new Error('이미지를 불러올 수 없습니다.'));
+            img.src = reader.result as string;
+        };
+        reader.onerror = () => reject(new Error('파일을 읽을 수 없습니다.'));
+        reader.readAsDataURL(file);
+    });
+};
 
 export default function Admin() {
     const [editingIdx, setEditingIdx] = useState<number | null>(null);
     const [editingApplyIdx, setEditingApplyIdx] = useState<number | null>(null);
     // const [preacher, setPreacher] = useState("");
     // const [benedictionBy, setBenedictionBy] = useState("");
+
+    // 🔴 수련회 포스터 (별도 문서 retreat/summercamp, Firestore에 압축 이미지 직접 저장 - Storage 미사용)
+    const [posterImageUrl, setPosterImageUrl] = useState("");
+    const [posterPreview, setPosterPreview] = useState("");
+    const [uploadingPoster, setUploadingPoster] = useState(false);
+    const [savingPoster, setSavingPoster] = useState(false);
+    const [posterSaved, setPosterSaved] = useState(false);
+
+    // 🔴 수련회 조 편성 이미지 (같은 문서에 함께 저장)
+    const [groupImageUrl, setGroupImageUrl] = useState("");
+    const [groupPreview, setGroupPreview] = useState("");
+    const [uploadingGroup, setUploadingGroup] = useState(false);
+
+    // 🔴 수련회 안내 사용 여부 (메인 화면 공지 배너 + /SummerCamp 접근 여부를 함께 제어)
+    const [retreatEnabled, setRetreatEnabled] = useState(true);
+
+    // 🔴 수련회 정보 카드 (일시/장소/회비/문의/준비물/주의사항) - 기본값은 /SummerCamp의 기존 하드코딩 값과 동일
+    const [retreatDate, setRetreatDate] = useState("2026. 8. 16 (주일) — 8. 18 (화)");
+    const [retreatLocation, setRetreatLocation] = useState("삼은교회");
+    const [retreatLocationDetail, setRetreatLocationDetail] = useState("충남 태안군 소원면 시목길 337");
+    const [retreatFeeAmount, setRetreatFeeAmount] = useState("55,000원");
+    const [retreatBankName, setRetreatBankName] = useState("카카오뱅크");
+    const [retreatAccountNumber, setRetreatAccountNumber] = useState("3333-29-6957710");
+    const [retreatAccountHolder, setRetreatAccountHolder] = useState("배소연");
+    const [retreatContact, setRetreatContact] = useState("회장 010-3180-6322");
+    const [retreatItems, setRetreatItems] = useState("경량 침낭(또는 침구류), 성경책, 여벌옷, 속옷, 세면도구, 수건, 필기구, 개인상비약");
+    const [retreatCaution, setRetreatCaution] = useState("캐리어 반입 금지");
 
     const {
         // 사용자 및 상태
@@ -47,6 +118,114 @@ export default function Admin() {
         handleDragStart, handleDragEnter, handleDragEnd
     } = useAdminData();
 
+    // 🔴 로그인 후 기존 포스터 불러오기
+    useEffect(() => {
+        if (!user) return;
+        (async () => {
+            try {
+                const snap = await getDoc(doc(db, "retreat", "summercamp"));
+                if (snap.exists()) {
+                    const data = snap.data();
+                    const url = data.posterImageUrl || "";
+                    setPosterImageUrl(url);
+                    setPosterPreview(url);
+                    const groupUrl = data.groupImageUrl || "";
+                    setGroupImageUrl(groupUrl);
+                    setGroupPreview(groupUrl);
+                    setRetreatEnabled(data.retreatEnabled !== undefined ? data.retreatEnabled : true);
+                    if (data.retreatDate) setRetreatDate(data.retreatDate);
+                    if (data.retreatLocation) setRetreatLocation(data.retreatLocation);
+                    if (data.retreatLocationDetail) setRetreatLocationDetail(data.retreatLocationDetail);
+                    if (data.retreatFeeAmount) setRetreatFeeAmount(data.retreatFeeAmount);
+                    if (data.retreatBankName) setRetreatBankName(data.retreatBankName);
+                    if (data.retreatAccountNumber) setRetreatAccountNumber(data.retreatAccountNumber);
+                    if (data.retreatAccountHolder) setRetreatAccountHolder(data.retreatAccountHolder);
+                    if (data.retreatContact) setRetreatContact(data.retreatContact);
+                    if (data.retreatItems) setRetreatItems(data.retreatItems);
+                    if (data.retreatCaution) setRetreatCaution(data.retreatCaution);
+                }
+            } catch (err) {
+                console.error("포스터 로드 실패:", err);
+            }
+        })();
+    }, [user]);
+
+    const handlePosterFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingPoster(true);
+        setPosterSaved(false);
+        try {
+            const dataUrl = await compressImageToDataUrl(file);
+            setPosterPreview(dataUrl);
+            setPosterImageUrl(dataUrl);
+        } catch (err) {
+            console.error("포스터 이미지 처리 실패:", err);
+            alert("이미지를 처리하는 데 실패했습니다.");
+        } finally {
+            setUploadingPoster(false);
+            e.target.value = "";
+        }
+    };
+
+    const handleGroupFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingGroup(true);
+        setPosterSaved(false);
+        try {
+            const dataUrl = await compressImageToDataUrl(file);
+            setGroupPreview(dataUrl);
+            setGroupImageUrl(dataUrl);
+        } catch (err) {
+            console.error("조 편성 이미지 처리 실패:", err);
+            alert("이미지를 처리하는 데 실패했습니다.");
+        } finally {
+            setUploadingGroup(false);
+            e.target.value = "";
+        }
+    };
+
+    const handleRemoveGroupImage = () => {
+        setGroupImageUrl("");
+        setGroupPreview("");
+        setPosterSaved(false);
+    };
+
+    const handleRemovePosterImage = () => {
+        setPosterImageUrl("");
+        setPosterPreview("");
+        setPosterSaved(false);
+    };
+
+    const handleSavePoster = async () => {
+        setSavingPoster(true);
+        try {
+            await setDoc(doc(db, "retreat", "summercamp"), {
+                posterImageUrl,
+                groupImageUrl,
+                retreatEnabled,
+                retreatDate,
+                retreatLocation,
+                retreatLocationDetail,
+                retreatFeeAmount,
+                retreatBankName,
+                retreatAccountNumber,
+                retreatAccountHolder,
+                retreatContact,
+                retreatItems,
+                retreatCaution,
+                updatedAt: new Date()
+            }, { merge: true });
+            setPosterSaved(true);
+        } catch (err) {
+            console.error("포스터 저장 실패:", err);
+            alert("포스터 저장에 실패했습니다.");
+        } finally {
+            setSavingPoster(false);
+        }
+    };
+
     if (!user) {
         return (
             <LoginForm
@@ -65,7 +244,17 @@ export default function Admin() {
 
     return (
         // <div className="min-h-screen bg-[#F7F2FA] ${fontStack} pb-32 font-sans tracking-tight">
-        <div className={`min-h-screen bg-[#F2F4F6] ${fontStack} pb-32 tracking-tight text-[#191F28]`}>
+        <div className={`admin-malgun min-h-screen bg-[#F2F4F6] ${fontStack} pb-32 tracking-tight text-[#191F28]`}>
+            {/* 🔴 theme.css의 @layer base가 input/h1-h4/p/label/button/span에 'Arita Buri'를 직접 지정해서
+                상위 요소의 폰트 지정을 덮어써버리는 문제를 관리자 페이지 안에서만 무력화 (레이어에 속하지 않은
+                스타일은 @layer base보다 항상 우선 적용되므로 !important 없이도 이김) */}
+            <style>{`
+                .admin-malgun, .admin-malgun input, .admin-malgun textarea, .admin-malgun select,
+                .admin-malgun button, .admin-malgun label, .admin-malgun span, .admin-malgun p,
+                .admin-malgun h1, .admin-malgun h2, .admin-malgun h3, .admin-malgun h4 {
+                    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', dotum, sans-serif;
+                }
+            `}</style>
             {/* Modals */}
             {/* {showLoginSuccess && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[70]">
@@ -681,6 +870,216 @@ export default function Admin() {
                                         사용 토글을 켜고 배너 제목을 입력하면 메인 화면 헤더 바로 아래에 배너가 노출되며, 클릭 시 새 탭에서 링크로 이동합니다.
                                     </p>
                                 </div>
+                            </div>
+                        </section>
+
+                        {/* 수련회 안내 섹션 */}
+                        <section className="p-8 rounded-[2.5rem] border-0 bg-white shadow-xl shadow-blue-500/5 transition-all animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <header className="flex items-center justify-between mb-8">
+                                <h2 className="text-2xl font-black text-[#191F28] tracking-tight flex items-center gap-3">
+                                    <div className="w-2.5 h-8 bg-[#3182F6] rounded-full shadow-[0_0_12px_rgba(49,130,246,0.3)]"></div>
+                                    수련회 안내(최상단 띠 형태 배너)
+                                    <Image size={20} strokeWidth={3} className="text-[#3182F6] opacity-50" />
+                                </h2>
+                                <div className="flex items-center gap-3 bg-[#F9FAFB] px-4 py-2 rounded-full border border-[#F2F4F6]">
+                                    <span className={`text-[13px] font-black transition-colors ${retreatEnabled ? 'text-[#3182F6]' : 'text-[#8B95A1]'}`}>
+                                        {retreatEnabled ? '사용중' : '사용안함'}
+                                    </span>
+                                    <button
+                                        onClick={() => { setRetreatEnabled(!retreatEnabled); setPosterSaved(false); }}
+                                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${retreatEnabled ? 'bg-[#3182F6]' : 'bg-[#E5E8EB]'}`}
+                                    >
+                                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-all duration-300 ${retreatEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                    </button>
+                                </div>
+                            </header>
+
+                            <div className="flex items-start gap-2 px-2 mb-6">
+                                <div className="w-5 h-5 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                    <span className="text-[#3182F6] text-[10px] font-black">TIP</span>
+                                </div>
+                                <p className="text-[12px] font-medium text-[#ADB5BD] leading-snug">
+                                    사용중일 때만 메인 화면 상단에 수련회 공지 배너가 노출되고 /SummerCamp 페이지도 열람 가능해요. 사용안함으로 바꾸면 배너가 사라지고, 주소를 직접 입력해 들어와도 "준비중" 안내만 표시돼요.
+                                </p>
+                            </div>
+
+                            <div className="space-y-5">
+                                <div className="space-y-3">
+                                    <label className="text-[14px] font-black text-[#8B95A1] ml-1">📅 일시</label>
+                                    <input
+                                        type="text"
+                                        value={retreatDate}
+                                        onChange={(e) => setRetreatDate(e.target.value)}
+                                        placeholder="예: 2026. 8. 16 (주일) — 8. 18 (화)"
+                                        className="w-full h-14 bg-[#F9FAFB] border-0 rounded-[18px] px-5 text-[16px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                    />
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[14px] font-black text-[#8B95A1] ml-1">📍 장소</label>
+                                    <input
+                                        type="text"
+                                        value={retreatLocation}
+                                        onChange={(e) => setRetreatLocation(e.target.value)}
+                                        placeholder="장소명 (예: 삼은교회)"
+                                        className="w-full h-14 bg-[#F9FAFB] border-0 rounded-[18px] px-5 text-[16px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0] mb-3"
+                                    />
+                                    <input
+                                        type="text"
+                                        value={retreatLocationDetail}
+                                        onChange={(e) => setRetreatLocationDetail(e.target.value)}
+                                        placeholder="상세 주소"
+                                        className="w-full h-12 bg-[#F9FAFB] border-0 rounded-[16px] px-5 text-[14px] font-bold text-[#4E5968] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                    />
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[14px] font-black text-[#8B95A1] ml-1">💳 회비</label>
+                                    <input
+                                        type="text"
+                                        value={retreatFeeAmount}
+                                        onChange={(e) => setRetreatFeeAmount(e.target.value)}
+                                        placeholder="금액 (예: 55,000원)"
+                                        className="w-full h-14 bg-[#F9FAFB] border-0 rounded-[18px] px-5 text-[16px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                    />
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <input
+                                            type="text"
+                                            value={retreatBankName}
+                                            onChange={(e) => setRetreatBankName(e.target.value)}
+                                            placeholder="은행명"
+                                            className="h-12 bg-[#F9FAFB] border-0 rounded-[14px] px-3 text-[13px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={retreatAccountNumber}
+                                            onChange={(e) => setRetreatAccountNumber(e.target.value)}
+                                            placeholder="계좌번호"
+                                            className="h-12 bg-[#F9FAFB] border-0 rounded-[14px] px-3 text-[13px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={retreatAccountHolder}
+                                            onChange={(e) => setRetreatAccountHolder(e.target.value)}
+                                            placeholder="예금주"
+                                            className="h-12 bg-[#F9FAFB] border-0 rounded-[14px] px-3 text-[13px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[14px] font-black text-[#8B95A1] ml-1">📞 문의</label>
+                                    <input
+                                        type="text"
+                                        value={retreatContact}
+                                        onChange={(e) => setRetreatContact(e.target.value)}
+                                        placeholder="예: 회장 010-3180-6322"
+                                        className="w-full h-14 bg-[#F9FAFB] border-0 rounded-[18px] px-5 text-[16px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                    />
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[14px] font-black text-[#8B95A1] ml-1">🎒 준비물</label>
+                                    <textarea
+                                        value={retreatItems}
+                                        onChange={(e) => setRetreatItems(e.target.value)}
+                                        placeholder="쉼표(,)로 구분해서 입력하세요"
+                                        rows={2}
+                                        className="w-full bg-[#F9FAFB] border-0 rounded-[18px] px-5 py-4 text-[15px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0] resize-none"
+                                    />
+                                    <p className="text-[11.5px] font-medium text-[#ADB5BD] leading-snug px-1">
+                                        쉼표로 구분해서 입력해요. 맨 앞에 쓴 항목이 강조 배지로 표시돼요.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[14px] font-black text-[#8B95A1] ml-1">⚠️ 주의사항</label>
+                                    <input
+                                        type="text"
+                                        value={retreatCaution}
+                                        onChange={(e) => setRetreatCaution(e.target.value)}
+                                        placeholder="예: 캐리어 반입 금지"
+                                        className="w-full h-14 bg-[#F9FAFB] border-0 rounded-[18px] px-5 text-[16px] font-bold text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
+                                    />
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[14px] font-black text-[#8B95A1] ml-1">🧑‍🤝‍🧑 조 편성</label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="relative w-24 h-32 rounded-[16px] bg-[#F9FAFB] ring-1 ring-[#F2F4F6] overflow-hidden flex items-center justify-center shrink-0">
+                                            {groupPreview ? (
+                                                <>
+                                                    <img src={groupPreview} alt="조 편성 미리보기" className="w-full h-full object-cover" />
+                                                    <button
+                                                        onClick={handleRemoveGroupImage}
+                                                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
+                                                        title="이미지 삭제"
+                                                    >
+                                                        <Trash2 size={12} className="text-white" />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <Image size={24} className="text-[#D1D8E0]" />
+                                            )}
+                                        </div>
+
+                                        <label className={`flex-1 h-14 rounded-[18px] ring-1 ring-[#F2F4F6] bg-[#F9FAFB] flex items-center justify-center gap-2 font-black text-[15px] transition-all text-center px-3 ${uploadingGroup ? 'text-[#8B95A1] cursor-not-allowed' : 'text-[#3182F6] cursor-pointer hover:bg-white hover:ring-2 hover:ring-[#3182F6]'}`}>
+                                            {uploadingGroup ? "이미지 처리 중..." : (groupPreview ? "이미지 다시 선택" : "조 편성 이미지 선택하기")}
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                disabled={uploadingGroup}
+                                                onChange={handleGroupFileChange}
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="text-[14px] font-black text-[#8B95A1] ml-1">🖼️ 포스터</label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="relative w-24 h-32 rounded-[16px] bg-[#F9FAFB] ring-1 ring-[#F2F4F6] overflow-hidden flex items-center justify-center shrink-0">
+                                            {posterPreview ? (
+                                                <>
+                                                    <img src={posterPreview} alt="포스터 미리보기" className="w-full h-full object-cover" />
+                                                    <button
+                                                        onClick={handleRemovePosterImage}
+                                                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
+                                                        title="이미지 삭제"
+                                                    >
+                                                        <Trash2 size={12} className="text-white" />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <Image size={24} className="text-[#D1D8E0]" />
+                                            )}
+                                        </div>
+
+                                        <label className={`flex-1 h-14 rounded-[18px] ring-1 ring-[#F2F4F6] bg-[#F9FAFB] flex items-center justify-center gap-2 font-black text-[15px] transition-all text-center px-3 ${uploadingPoster ? 'text-[#8B95A1] cursor-not-allowed' : 'text-[#3182F6] cursor-pointer hover:bg-white hover:ring-2 hover:ring-[#3182F6]'}`}>
+                                            {uploadingPoster ? "이미지 처리 중..." : (posterPreview ? "이미지 다시 선택" : "포스터 이미지 선택하기")}
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                disabled={uploadingPoster}
+                                                onChange={handlePosterFileChange}
+                                            />
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={handleSavePoster}
+                                    disabled={savingPoster || uploadingPoster || uploadingGroup}
+                                    className="w-full h-14 rounded-[18px] bg-[#3182F6] text-white font-black text-[15px] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+                                >
+                                    {savingPoster ? "저장 중..." : posterSaved ? "저장됨 ✓" : "수련회 안내 저장하기"}
+                                </button>
+
+                                <p className="text-[12px] font-medium text-[#ADB5BD] leading-snug px-1">
+                                    이미지를 선택하면 자동으로 용량을 줄여 저장해요. 위 사용중/사용안함 상태와 포스터가 이 버튼 하나로 함께 저장돼요.
+                                </p>
                             </div>
                         </section>
 
