@@ -423,7 +423,7 @@ export default function App() {
                         }}
                     >
                         <span style={{ background: "#F2F4F6", color: "#4E5968", padding: "6px 12px", borderRadius: "10px", fontSize: "12px", fontWeight: 700 }}>
-                            📅 2026. 08. 14 — 08. 16
+                            📅 2026. 08. 16 — 08. 18
                         </span>
                     </div>
 
