@@ -11,6 +11,28 @@ export default function App() {
     const [activeTab, setActiveTab] = useState<"apply" | "schedule" | "group" | "poster">("apply");
     const [scheduleDay, setScheduleDay] = useState<0 | 1 | 2>(0);
 
+    // 🔴 조 편성 이미지를 확대해서 볼 수 있는 라이트박스
+    const [groupZoomOpen, setGroupZoomOpen] = useState(false);
+    const [groupZoomedIn, setGroupZoomedIn] = useState(false);
+
+    // 🔴 조 편성 공개 시각: 2026-08-16(주일) 12:59(KST) 이후 자동으로 이미지 노출
+    const groupRevealTime = new Date("2026-08-16T12:59:00+09:00").getTime();
+    const isGroupRevealed = Date.now() >= groupRevealTime;
+
+    // 🔴 조 편성 공개까지 남은 시간 계산 (1초마다 재렌더링되는 timeLeft 틱에 얹혀서 자동 갱신)
+    const getCountdownParts = (targetTime: number) => {
+        const diff = targetTime - Date.now();
+        if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, isOver: true };
+        return {
+            days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+            hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+            minutes: Math.floor((diff / 1000 / 60) % 60),
+            seconds: Math.floor((diff / 1000) % 60),
+            isOver: false
+        };
+    };
+    const groupCountdown = getCountdownParts(groupRevealTime);
+
     // 🔴 관리자 페이지에서 업로드한 수련회 포스터/조 편성 이미지 + 수련회 사용 여부 실시간 반영
     const [posterImageUrl, setPosterImageUrl] = useState("");
     const [groupImageUrl, setGroupImageUrl] = useState("");
@@ -791,27 +813,130 @@ export default function App() {
 
                     {/* ── 조편성 탭 ── */}
                     {activeTab === "group" && (
-                    <div style={{ padding: groupImageUrl ? "4px" : "48px 12px", textAlign: "center" }}>
-                        {groupImageUrl ? (
-                            <img
-                                src={groupImageUrl}
-                                alt="수련회 조 편성"
-                                style={{ width: "100%", display: "block", borderRadius: "20px", boxShadow: "0 8px 24px rgba(0, 0, 0, 0.08)" }}
-                            />
+                    <div style={{ padding: (groupImageUrl && isGroupRevealed) ? "4px" : "48px 12px", textAlign: "center" }}>
+                        {(groupImageUrl && isGroupRevealed) ? (
+                            <div style={{ position: "relative" }}>
+                                <img
+                                    src={groupImageUrl}
+                                    alt="수련회 조 편성"
+                                    onClick={() => { setGroupZoomOpen(true); setGroupZoomedIn(false); }}
+                                    style={{ width: "100%", display: "block", borderRadius: "20px", boxShadow: "0 8px 24px rgba(0, 0, 0, 0.08)", cursor: "zoom-in" }}
+                                />
+                                <div
+                                    onClick={() => { setGroupZoomOpen(true); setGroupZoomedIn(false); }}
+                                    style={{
+                                        position: "absolute",
+                                        bottom: "12px",
+                                        right: "12px",
+                                        background: "rgba(0, 0, 0, 0.55)",
+                                        color: "#fff",
+                                        fontSize: "12px",
+                                        fontWeight: 700,
+                                        padding: "6px 12px",
+                                        borderRadius: "100px",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "5px"
+                                    }}
+                                >
+                                    🔍 확대해서 보기
+                                </div>
+                            </div>
                         ) : (
                             <>
                                 <div style={{ width: "72px", height: "72px", borderRadius: "50%", background: "#F2F4F6", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: "32px" }}>
                                     👥
                                 </div>
-                                <div style={{ fontSize: "16px", fontWeight: 800, color: "#191F28", marginBottom: "8px" }}>
+                                <div style={{ fontSize: "16px", fontWeight: 800, color: "#191F28", marginBottom: "16px" }}>
                                     조 편성 준비중이에요
                                 </div>
-                                <div style={{ fontSize: "13px", fontWeight: 500, color: "#8B95A1", lineHeight: "1.6" }}>
-                                    수련회가 가까워지면<br />여기서 우리 조를 확인할 수 있어요
-                                </div>
+                                {!isGroupRevealed ? (
+                                    <>
+                                        <div
+                                            className="glow-pulse-badge"
+                                            style={{
+                                                background: "rgba(232, 243, 255, 0.9)",
+                                                border: "1px solid #D6E9FF",
+                                                borderRadius: "16px",
+                                                padding: "12px 20px",
+                                                maxWidth: "300px",
+                                                margin: "0 auto 16px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                gap: "8px"
+                                            }}
+                                        >
+                                            <span style={{ fontSize: "14px" }}>⏳</span>
+                                            <span style={{ fontSize: "13px", fontWeight: 700, color: "#1A66DB", letterSpacing: "-0.02em" }}>
+                                                공개까지 {" "}
+                                                <span style={{ fontSize: "14px", fontWeight: 800 }}>{groupCountdown.days}</span>일{" "}
+                                                <span style={{ fontSize: "14px", fontWeight: 800 }}>{String(groupCountdown.hours).padStart(2, '0')}</span>:
+                                                <span style={{ fontSize: "14px", fontWeight: 800 }}>{String(groupCountdown.minutes).padStart(2, '0')}</span>:
+                                                <span style={{ fontSize: "14px", fontWeight: 800 }}>{String(groupCountdown.seconds).padStart(2, '0')}</span> 남음
+                                            </span>
+                                        </div>
+                                        <div style={{ fontSize: "13px", fontWeight: 500, color: "#8B95A1", lineHeight: "1.6" }}>
+                                            2026. 8. 16 (주일) 오후 12:59에 공개돼요<br />그때 다시 확인해주세요
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div style={{ fontSize: "13px", fontWeight: 500, color: "#8B95A1", lineHeight: "1.6" }}>
+                                        조 편성 이미지가 곧 업로드될 예정이에요<br />잠시 후 다시 확인해주세요
+                                    </div>
+                                )}
                             </>
                         )}
                     </div>
+                    )}
+
+                    {/* ── 조 편성 확대 라이트박스 ── */}
+                    {groupZoomOpen && groupImageUrl && (
+                        <div
+                            onClick={() => setGroupZoomOpen(false)}
+                            style={{
+                                position: "fixed",
+                                inset: 0,
+                                background: "rgba(10, 10, 15, 0.92)",
+                                zIndex: 200,
+                                display: "flex",
+                                alignItems: groupZoomedIn ? "flex-start" : "center",
+                                justifyContent: groupZoomedIn ? "flex-start" : "center",
+                                overflow: "auto",
+                                WebkitOverflowScrolling: "touch"
+                            }}
+                        >
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setGroupZoomOpen(false); }}
+                                style={{
+                                    position: "fixed",
+                                    top: "20px",
+                                    right: "20px",
+                                    width: "40px",
+                                    height: "40px",
+                                    borderRadius: "50%",
+                                    background: "rgba(255, 255, 255, 0.12)",
+                                    border: "none",
+                                    color: "#fff",
+                                    fontSize: "20px",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    zIndex: 201
+                                }}
+                            >
+                                ✕
+                            </button>
+                            <img
+                                src={groupImageUrl}
+                                alt="수련회 조 편성 확대"
+                                onClick={(e) => { e.stopPropagation(); setGroupZoomedIn((prev) => !prev); }}
+                                style={groupZoomedIn
+                                    ? { width: "220%", maxWidth: "none", cursor: "zoom-out", margin: "40px" }
+                                    : { maxWidth: "94vw", maxHeight: "88vh", objectFit: "contain", cursor: "zoom-in" }
+                                }
+                            />
+                        </div>
                     )}
 
                     {/* ── 포스터 탭 ── */}
