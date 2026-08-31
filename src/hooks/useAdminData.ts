@@ -20,6 +20,26 @@ export interface AdBannerLinkItem {
     url: string;
 }
 
+export interface WorshipOrderItem {
+    key: string; // 항목 종류 식별용 (신앙고백/설교자 등 연동에 사용, 화면에 노출 안 됨)
+    label: string;
+    value: string;
+    modalSource?: "creed" | "confession"; // 클릭 시 팝업으로 상세 내용을 보여주는 항목
+    dynamicSource?: "preacher" | "newsInCharge" | "benedictionBy"; // 다른 필드와 값이 자동 연동되는 항목
+}
+
+// ✅ 기존 Home.tsx 하드코딩 값과 동일한 기본 예배 순서 (Firestore에 값이 없을 때 사용)
+export const defaultWorshipOrder: WorshipOrderItem[] = [
+    { key: "invocation", label: "입례송", value: "다같이" },
+    { key: "creed", label: "신앙고백", value: "사도신경 / 시편 95:1-7", modalSource: "creed" },
+    { key: "confession", label: "예배자의 고백", value: "다같이", modalSource: "confession" },
+    { key: "praise1", label: "찬양", value: "JOY 찬양팀" },
+    { key: "sermon", label: "말씀 선포", value: "청년부 목사님", dynamicSource: "preacher" },
+    { key: "offering", label: "봉헌", value: "JOY 찬양팀" },
+    { key: "news", label: "교회 소식", value: "최지환", dynamicSource: "newsInCharge" },
+    { key: "benediction", label: "축도", value: "청년부 목사님", dynamicSource: "benedictionBy" },
+];
+
 export const useAdminData = () => {
     const [user, setUser] = useState<any>(null);
     const [showLoginSuccess, setShowLoginSuccess] = useState(false);
@@ -69,10 +89,51 @@ export const useAdminData = () => {
     const [newQQuote, setNewQQuote] = useState("");
     const [newQContent, setNewQContent] = useState("");
 
-    const [activeTab, setActiveTab] = useState<'edit' | 'history'>('edit');
+    const [activeTab, setActiveTab] = useState<'edit' | 'leaders' | 'history'>('edit');
     const [worshipperConfession, setWorshipperConfession] = useState("");
     const [apostlesCreed, setApostlesCreed] = useState("");
     const [psalms, setPsalms] = useState("");
+
+    // 예배 순서
+    const [worshipOrder, setWorshipOrder] = useState<WorshipOrderItem[]>(defaultWorshipOrder);
+    const [newWorshipLabel, setNewWorshipLabel] = useState("");
+    const [newWorshipValue, setNewWorshipValue] = useState("");
+
+    const moveWorshipOrderItem = (index: number, direction: "up" | "down") => {
+        const targetIndex = direction === "up" ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= worshipOrder.length) return;
+        const newList = [...worshipOrder];
+        [newList[index], newList[targetIndex]] = [newList[targetIndex], newList[index]];
+        setWorshipOrder(newList);
+    };
+
+    const updateWorshipOrderLabel = (index: number, label: string) => {
+        const newList = [...worshipOrder];
+        newList[index] = { ...newList[index], label };
+        setWorshipOrder(newList);
+    };
+
+    const updateWorshipOrderValue = (index: number, value: string) => {
+        const newList = [...worshipOrder];
+        newList[index] = { ...newList[index], value };
+        setWorshipOrder(newList);
+    };
+
+    const addWorshipOrderItem = () => {
+        if (!newWorshipLabel.trim()) return;
+        const newItem: WorshipOrderItem = {
+            key: `custom-${Date.now()}`,
+            label: newWorshipLabel.trim(),
+            value: newWorshipValue.trim(),
+        };
+        setWorshipOrder([...worshipOrder, newItem]);
+        setNewWorshipLabel("");
+        setNewWorshipValue("");
+    };
+
+    const removeWorshipOrderItem = (index: number) => {
+        setWorshipOrder(worshipOrder.filter((_, i) => i !== index));
+    };
 
     const dragItem = useRef<number | null>(null);
     const dragOverItem = useRef<number | null>(null);
@@ -159,6 +220,7 @@ export const useAdminData = () => {
                         setApostlesCreed(data.apostlesCreed || "");
                         setPsalms(data.psalms || "");
                         setWorshipperConfession(data.worshipperConfession || "");
+                        setWorshipOrder(data.worshipOrder && data.worshipOrder.length > 0 ? data.worshipOrder : defaultWorshipOrder);
                         setAdBannerEnabled(data.adBannerEnabled || false);
                         setAdBannerTitle(data.adBannerTitle || "");
                         setAdBannerDescription(data.adBannerDescription || "");
@@ -197,6 +259,7 @@ export const useAdminData = () => {
                 worshipperConfession,
                 apostlesCreed,
                 psalms,
+                worshipOrder,
                 adBannerEnabled,
                 adBannerTitle,
                 adBannerDescription,
@@ -275,6 +338,9 @@ export const useAdminData = () => {
         newQTitle, setNewQTitle, newQQuote, setNewQQuote, newQContent, setNewQContent,
         activeTab, setActiveTab, historyList, worshipperConfession, setWorshipperConfession,
         apostlesCreed, setApostlesCreed, psalms, setPsalms,
+        worshipOrder, setWorshipOrder, moveWorshipOrderItem, updateWorshipOrderLabel, updateWorshipOrderValue,
+        addWorshipOrderItem, removeWorshipOrderItem,
+        newWorshipLabel, setNewWorshipLabel, newWorshipValue, setNewWorshipValue,
         daysInMonth, firstDayOfMonth, renderCalendarDays,
         handleLogin, handleLogout, handleUpdate,
         handleDragStart, handleDragEnter, handleDragEnd, dragOverItem,

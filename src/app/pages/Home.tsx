@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { db } from '../../firebase'; // 설정파일
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore";
 import { Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { defaultWorshipOrder } from '../../hooks/useAdminData';
 
 // Profile images import
 import imgPastor from "../../assets/23b6ea5c163050d8d7280dcdba4dd396a2a33a46.png";
@@ -102,14 +103,15 @@ const newsData = [
     },
 ];
 
-const leaderData = [
-    { role: '담당', name: '임원일 목사님', phone: '010-6258-8105', img: imgPastor },
-    { role: '부장', name: '박양규 장로님', phone: '010-2277-9734', img: imgDeacon },
-    { role: '간사', name: '고혁준 간사님', phone: '010-9231-1175', img: imgStaff },
-    { role: '회장', name: '최지환 청년', phone: '010-3180-6322', img: imgPresident },
-    { role: '총무', name: '박은희 청년', phone: '010-5767-9734', img: imgSecretary1 },
-    { role: '회계', name: '배소연 청년', phone: '010-3646-4475', img: imgTreasurer },
-    { role: '서기', name: '김석진 청년', phone: '010-7164-4068', img: imgSecretary2 },
+// 관리자페이지에서 아직 한 번도 저장하지 않았을 때 보여줄 기본값 (하드코딩 폴백, 관리자가 등록하면 Firestore 데이터로 대체됨)
+const defaultLeaderData = [
+    { role: '담당', name: '임원일 목사님', phone: '010-6258-8105', imageUrl: imgPastor },
+    { role: '부장', name: '박양규 장로님', phone: '010-2277-9734', imageUrl: imgDeacon },
+    { role: '간사', name: '고혁준 간사님', phone: '010-9231-1175', imageUrl: imgStaff },
+    { role: '회장', name: '최지환 청년', phone: '010-3180-6322', imageUrl: imgPresident },
+    { role: '총무', name: '박은희 청년', phone: '010-5767-9734', imageUrl: imgSecretary1 },
+    { role: '회계', name: '배소연 청년', phone: '010-3646-4475', imageUrl: imgTreasurer },
+    { role: '서기', name: '김석진 청년', phone: '010-7164-4068', imageUrl: imgSecretary2 },
 ];
 
 const galleryData = [
@@ -153,7 +155,12 @@ export default function Home() {
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [activeSection, setActiveSection] = useState('home');
     const [bulletin, setBulletin] = useState<any>(null);
+    const [leaders, setLeaders] = useState<{ id: string; role: string; name: string; phone: string; imageUrl: string }[]>([]);
     const navigate = useNavigate();
+
+    // 관리자페이지에서 한 번도 저장한 적이 없으면(컬렉션이 비어있으면) 기존 하드코딩 값을 그대로 보여줌
+    const displayLeaders: { id?: string; role: string; name: string; phone: string; imageUrl: string }[] =
+        leaders.length > 0 ? leaders : defaultLeaderData;
 
     // 수련회 광고 배너
     const [isRetreatModalOpen, setIsRetreatModalOpen] = useState(false);
@@ -258,6 +265,14 @@ export default function Home() {
             }
         });
         return () => unsubRetreat();
+    }, []);
+
+    useEffect(() => {
+        // 섬기는 사람들: 관리자페이지에서 추가/수정/삭제하면 실시간으로 반영
+        const unsubLeaders = onSnapshot(query(collection(db, "leaders"), orderBy("order")), (snap) => {
+            setLeaders(snap.docs.map((d) => ({ id: d.id, ...d.data() } as any)));
+        });
+        return () => unsubLeaders();
     }, []);
 
     const scrollToSection = (id: string) => {
@@ -438,79 +453,45 @@ export default function Home() {
                             <div className="bg-white/15 backdrop-blur-md rounded-2xl p-6 border border-white/20">
                                 <h3 className="font-bold mb-6 text-center opacity-90 text-[16px] font-[Arita_Dotum_KR] tracking-wider">예배 순서</h3>
                                 <div className="space-y-5 text-sm">
+                                    {(bulletin?.worshipOrder && bulletin.worshipOrder.length > 0 ? bulletin.worshipOrder : defaultWorshipOrder).map((item: any, idx: number) => {
+                                        // 신앙고백 / 예배자의 고백: 클릭하면 상세 내용 팝업
+                                        if (item.modalSource) {
+                                            const modalTitle = item.modalSource === "creed"
+                                                ? `${item.label} (${item.value})`
+                                                : item.label;
+                                            const modalText = item.modalSource === "creed"
+                                                ? `${bulletin?.apostlesCreed || ""}\n\n${bulletin?.psalms || ""}`
+                                                : (bulletin?.worshipperConfession || "하나님, 오늘도 우리가 한 마음으로 모여...");
 
-                                    {/* 입례송 */}
-                                    <div className="flex justify-between items-center">
-                                        <span className="opacity-90 font-[Arita_Dotum_KR] text-[15px]">입례송</span>
-                                        <span className="font-bold font-[Arita_Dotum_KR] text-[15px]">다같이</span>
-                                    </div>
+                                            return (
+                                                <div
+                                                    key={item.key || idx}
+                                                    onClick={() => setModalContent({ title: modalTitle, content: modalText })}
+                                                    className="flex justify-between items-center cursor-pointer hover:bg-white/10 p-2 -mx-2 rounded-xl transition-all group"
+                                                >
+                                                    <span className="opacity-90 flex items-center gap-2 font-[Arita_Dotum_KR] text-[15px]">
+                                                        {item.label}
+                                                        <MessageSquare size={14} className="opacity-40 group-hover:opacity-100 transition-opacity" />
+                                                    </span>
+                                                    <span className="font-bold font-[Arita_Dotum_KR] text-[15px]">{item.value}</span>
+                                                </div>
+                                            );
+                                        }
 
-                                    {/* 신앙고백 */}
-                                    <div
-                                        onClick={() => setModalContent({
-                                            title: "신앙고백 (사도신경 / 시편 95:1-7)",
-                                            content: `${bulletin?.apostlesCreed || ""}\n\n${bulletin?.psalms || ""}`
-                                        })}
-                                        className="flex justify-between items-center cursor-pointer hover:bg-white/10 p-2 -mx-2 rounded-xl transition-all group"
-                                    >
-                                        <span className="opacity-90 flex items-center gap-2 font-[Arita_Dotum_KR] text-[15px]">
-                                            신앙고백
-                                            <MessageSquare size={14} className="opacity-40 group-hover:opacity-100 transition-opacity" />
-                                        </span>
-                                        <span className="font-bold font-[Arita_Dotum_KR] text-[15px]">사도신경 / 시편 95:1-7</span>
-                                    </div>
+                                        // 설교자/소식담당자/축도자와 연동되는 항목 (해당 필드가 비어 있으면 저장된 기본값 사용)
+                                        const displayValue = item.dynamicSource
+                                            ? (bulletin?.[item.dynamicSource] || item.value)
+                                            : item.value;
 
-                                    {/* 예배자의 고백 */}
-                                    <div
-                                        onClick={() => setModalContent({
-                                            title: "예배자의 고백",
-                                            content: bulletin?.worshipperConfession || "하나님, 오늘도 우리가 한 마음으로 모여..."
-                                        })}
-                                        className="flex justify-between items-center cursor-pointer hover:bg-white/10 p-2 -mx-2 rounded-xl transition-all group"
-                                    >
-                                        <span className="opacity-90 flex items-center gap-2 font-[Arita_Dotum_KR] text-[15px]">
-                                            예배자의 고백
-                                            <MessageSquare size={14} className="opacity-40 group-hover:opacity-100 transition-opacity" />
-                                        </span>
-                                        <span className="font-bold font-[Arita_Dotum_KR] text-[15px]">다같이</span>
-                                    </div>
-
-                                    {/* 찬양 */}
-                                    <div className="flex justify-between items-center">
-                                        <span className="opacity-90 font-[Arita_Dotum_KR] text-[15px]">찬양</span>
-                                        <span className="font-bold font-[Arita_Dotum_KR] text-[15px]">JOY 찬양팀</span>
-                                    </div>
-
-                                    {/* 말씀 선포 */}
-                                    <div className="flex justify-between items-center py-1">
-                                        <span className="opacity-90 font-[Arita_Dotum_KR] text-[15px]">말씀 선포</span>
-                                        <span className="font-black font-[Arita_Dotum_KR] text-[16px]">
-                                            {bulletin?.preacher ? bulletin.preacher : "청년부 목사님"}
-                                        </span>
-                                    </div>
-
-                                    {/* 봉헌 */}
-                                    <div className="flex justify-between items-center">
-                                        <span className="opacity-90 font-[Arita_Dotum_KR] text-[15px]">봉헌</span>
-                                        <span className="font-bold font-[Arita_Dotum_KR] text-[15px]">JOY 찬양팀</span>
-                                    </div>
-
-                                    {/* 교회 소식 (실시간 담당자 반영) */}
-                                    <div className="flex justify-between items-center">
-                                        <span className="opacity-90 font-[Arita_Dotum_KR] text-[15px]">교회 소식</span>
-                                        <span className="font-bold font-[Arita_Dotum_KR] text-[15px]">
-                                            {bulletin?.newsInCharge || "최지환"}
-                                        </span>
-                                    </div>
-
-                                    {/* 축도 (실시간 축도자 반영) */}
-                                    {/* 축도 */}
-                                    <div className="flex justify-between items-center">
-                                        <span className="opacity-90 font-[Arita_Dotum_KR] text-[15px]">축도</span>
-                                        <span className="font-bold font-[Arita_Dotum_KR] text-[15px]">
-                                            {bulletin?.benedictionBy ? bulletin.benedictionBy : "청년부 목사님"}
-                                        </span>
-                                    </div>
+                                        return (
+                                            <div key={item.key || idx} className="flex justify-between items-center">
+                                                <span className="opacity-90 font-[Arita_Dotum_KR] text-[15px]">{item.label}</span>
+                                                <span className={item.dynamicSource === "preacher" ? "font-black font-[Arita_Dotum_KR] text-[16px]" : "font-bold font-[Arita_Dotum_KR] text-[15px]"}>
+                                                    {displayValue}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
@@ -770,131 +751,28 @@ export default function Home() {
                         </h2>
                     </div>
                     <div className="bg-white rounded-3xl border border-[#9C8577]/20 shadow-sm overflow-hidden">
-                        {/* 담당 목사님 */}
-                        <div className="flex items-center justify-between p-5 border-b border-[#9C8577]/10 hover:bg-[#9C8577]/5 transition-colors cursor-pointer" onClick={() => openProfile(0)}>
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-[#9C8577]/10 flex items-center justify-center text-[#8B7466] border border-[#9C8577]/20 shrink-0 overflow-hidden">
-                                    {leaderData[0].img ? (
-                                        <img src={leaderData[0].img} alt={leaderData[0].name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User className="w-5 h-5" />
-                                    )}
+                        {displayLeaders.map((leader, index) => (
+                            <div
+                                key={leader.id ?? index}
+                                className="flex items-center justify-between p-5 border-b border-[#9C8577]/10 last:border-0 hover:bg-[#9C8577]/5 transition-colors cursor-pointer"
+                                onClick={() => openProfile(index)}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-[#9C8577]/10 flex items-center justify-center text-[#8B7466] border border-[#9C8577]/20 shrink-0 overflow-hidden">
+                                        {leader.imageUrl ? (
+                                            <img src={leader.imageUrl} alt={leader.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User className="w-5 h-5" />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">{leader.role}</p>
+                                        <p className="font-black text-[#4A3528] text-sm tracking-tight">{leader.name}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">담당 목사 </p>
-                                    <p className="font-black text-[#4A3528] text-sm tracking-tight">임원일 목사님</p>
-                                </div>
+                                <ChevronRight className="w-4 h-4 text-slate-200" />
                             </div>
-                            <ChevronRight className="w-4 h-4 text-slate-200" />
-                        </div>
-
-                        {/* 장로님 */}
-                        <div className="flex items-center justify-between p-5 border-b border-[#9C8577]/10 hover:bg-[#9C8577]/5 transition-colors cursor-pointer" onClick={() => openProfile(1)}>
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-[#9C8577]/10 flex items-center justify-center text-[#8B7466] border border-[#9C8577]/20 shrink-0 overflow-hidden">
-                                    {leaderData[1].img ? (
-                                        <img src={leaderData[1].img} alt={leaderData[1].name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User className="w-5 h-5" />
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">부장</p>
-                                    <p className="font-black text-[#4A3528] text-sm tracking-tight">박양규 장로님</p>
-                                </div>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-slate-200" />
-                        </div>
-
-                        {/* 간사님 */}
-                        <div className="flex items-center justify-between p-5 border-b border-[#9C8577]/10 hover:bg-[#9C8577]/5 transition-colors cursor-pointer" onClick={() => openProfile(2)}>
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-[#9C8577]/10 flex items-center justify-center text-[#8B7466] border border-[#9C8577]/20 shrink-0 overflow-hidden">
-                                    {leaderData[2].img ? (
-                                        <img src={leaderData[2].img} alt={leaderData[2].name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User className="w-5 h-5" />
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">간사</p>
-                                    <p className="font-black text-[#4A3528] text-sm tracking-tight">고혁준 간사님</p>
-                                </div>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-slate-200" />
-                        </div>
-
-                        {/* 회장 */}
-                        <div className="flex items-center justify-between p-5 border-b border-[#9C8577]/10 hover:bg-[#9C8577]/5 transition-colors cursor-pointer" onClick={() => openProfile(3)}>
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-[#9C8577]/10 flex items-center justify-center text-[#8B7466] border border-[#9C8577]/20 shrink-0 overflow-hidden">
-                                    {leaderData[3].img ? (
-                                        <img src={leaderData[3].img} alt={leaderData[3].name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User className="w-5 h-5" />
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">회장</p>
-                                    <p className="font-black text-[#4A3528] text-sm tracking-tight">최지환 청년</p>
-                                </div>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-slate-200" />
-                        </div>
-
-                        {/* 총무 */}
-                        <div className="flex items-center justify-between p-5 border-b border-[#9C8577]/10 hover:bg-[#9C8577]/5 transition-colors cursor-pointer" onClick={() => openProfile(4)}>
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-[#9C8577]/10 flex items-center justify-center text-[#8B7466] border border-[#9C8577]/20 shrink-0 overflow-hidden">
-                                    {leaderData[4].img ? (
-                                        <img src={leaderData[4].img} alt={leaderData[4].name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User className="w-5 h-5" />
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">총무</p>
-                                    <p className="font-black text-[#4A3528] text-sm tracking-tight">박은희 청년</p>
-                                </div>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-slate-200" />
-                        </div>
-
-                        {/* 회계 */}
-                        <div className="flex items-center justify-between p-5 border-b border-[#9C8577]/10 hover:bg-[#9C8577]/5 transition-colors cursor-pointer" onClick={() => openProfile(5)}>
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-[#9C8577]/10 flex items-center justify-center text-[#8B7466] border border-[#9C8577]/20 shrink-0 overflow-hidden">
-                                    {leaderData[5].img ? (
-                                        <img src={leaderData[5].img} alt={leaderData[5].name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User className="w-5 h-5" />
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">회계</p>
-                                    <p className="font-black text-[#4A3528] text-sm tracking-tight">배소연 청년</p>
-                                </div>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-slate-200" />
-                        </div>
-
-                        {/* 서기 */}
-                        <div className="flex items-center justify-between p-5 border-b border-[#9C8577]/10 last:border-0 hover:bg-[#9C8577]/5 transition-colors cursor-pointer" onClick={() => openProfile(6)}>
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-[#9C8577]/10 flex items-center justify-center text-[#8B7466] border border-[#9C8577]/20 shrink-0 overflow-hidden">
-                                    {leaderData[6].img ? (
-                                        <img src={leaderData[6].img} alt={leaderData[6].name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User className="w-5 h-5" />
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">서기</p>
-                                    <p className="font-black text-[#4A3528] text-sm tracking-tight">김석진 청년</p>
-                                </div>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-slate-200" />
-                        </div>
+                        ))}
                     </div>
                 </section>
 
@@ -971,10 +849,10 @@ export default function Home() {
 
                         {/* Profile Image - Rectangle */}
                         <div className="relative w-full aspect-[3/4] bg-gradient-to-br from-[#9C8577]/20 to-[#E8DDD5] overflow-hidden">
-                            {leaderData[selectedLeader].img ? (
+                            {displayLeaders[selectedLeader].imageUrl ? (
                                 <img
-                                    src={leaderData[selectedLeader].img}
-                                    alt={leaderData[selectedLeader].name}
+                                    src={displayLeaders[selectedLeader].imageUrl}
+                                    alt={displayLeaders[selectedLeader].name}
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
@@ -988,10 +866,10 @@ export default function Home() {
                             {/* Name and Role */}
                             <div className="text-center mb-6">
                                 <p className="text-[#8B7466] text-xs font-black uppercase tracking-[0.2em] mb-2">
-                                    {leaderData[selectedLeader].role}
+                                    {displayLeaders[selectedLeader].role}
                                 </p>
                                 <h3 className="text-2xl font-black text-[#4A3528]">
-                                    {leaderData[selectedLeader].name}
+                                    {displayLeaders[selectedLeader].name}
                                 </h3>
                             </div>
 
@@ -999,21 +877,21 @@ export default function Home() {
                             <div className="flex items-center justify-center gap-2 bg-slate-50 py-3 rounded-2xl mb-4">
                                 <Phone className="w-4 h-4 text-slate-400" />
                                 <span className="text-slate-600 font-bold tracking-wider">
-                                    {leaderData[selectedLeader].phone}
+                                    {displayLeaders[selectedLeader].phone}
                                 </span>
                             </div>
 
                             {/* Action Buttons */}
                             <div className="grid grid-cols-2 gap-3">
                                 <a
-                                    href={`tel:${leaderData[selectedLeader].phone}`}
+                                    href={`tel:${displayLeaders[selectedLeader].phone}`}
                                     className="bg-[#9C8577] hover:bg-[#8B7466] text-white py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
                                 >
                                     <PhoneCall className="w-4 h-4" />
                                     <span className="font-bold text-sm">전화하기</span>
                                 </a>
                                 <a
-                                    href={`sms:${leaderData[selectedLeader].phone}`}
+                                    href={`sms:${displayLeaders[selectedLeader].phone}`}
                                     className="bg-[#4A3528] hover:bg-[#3A2518] text-white py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm"
                                 >
                                     <MessageSquare className="w-4 h-4" />

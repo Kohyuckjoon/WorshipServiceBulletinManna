@@ -4,22 +4,22 @@ import { db } from '../../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 export default function App() {
-    // 🔴 실시간 남은 시간 상태 관리 (서울 시간 기준 카운트다운용)
+    // 실시간 남은 시간 상태 관리 (서울 시간 기준 카운트다운용)
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isOver: false });
 
-    // 🔴 상단 탭 메뉴 상태 (신청서 / 일정표 / 조편성 / 포스터)
+    // 상단 탭 메뉴 상태 (신청서 / 일정표 / 조편성 / 포스터)
     const [activeTab, setActiveTab] = useState<"apply" | "schedule" | "group" | "poster">("apply");
     const [scheduleDay, setScheduleDay] = useState<0 | 1 | 2>(0);
 
-    // 🔴 조 편성 이미지를 확대해서 볼 수 있는 라이트박스
+    // 조 편성 이미지를 확대해서 볼 수 있는 라이트박스
     const [groupZoomOpen, setGroupZoomOpen] = useState(false);
     const [groupZoomedIn, setGroupZoomedIn] = useState(false);
 
-    // 🔴 조 편성 공개 시각: 2026-08-16(주일) 12:59(KST) 이후 자동으로 이미지 노출
+    // 조 편성 공개 시각: 2026-08-16(주일) 12:59(KST) 이후 자동으로 이미지 노출
     const groupRevealTime = new Date("2026-08-16T12:59:00+09:00").getTime();
     const isGroupRevealed = Date.now() >= groupRevealTime;
 
-    // 🔴 조 편성 공개까지 남은 시간 계산 (1초마다 재렌더링되는 timeLeft 틱에 얹혀서 자동 갱신)
+    // 조 편성 공개까지 남은 시간 계산 (1초마다 재렌더링되는 timeLeft 틱에 얹혀서 자동 갱신)
     const getCountdownParts = (targetTime: number) => {
         const diff = targetTime - Date.now();
         if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, isOver: true };
@@ -33,12 +33,12 @@ export default function App() {
     };
     const groupCountdown = getCountdownParts(groupRevealTime);
 
-    // 🔴 관리자 페이지에서 업로드한 수련회 포스터/조 편성 이미지 + 수련회 사용 여부 실시간 반영
+    // 관리자 페이지에서 업로드한 수련회 포스터/조 편성 이미지 + 수련회 사용 여부 실시간 반영
     const [posterImageUrl, setPosterImageUrl] = useState("");
     const [groupImageUrl, setGroupImageUrl] = useState("");
     const [retreatEnabled, setRetreatEnabled] = useState(true);
 
-    // 🔴 관리자 페이지에서 직접 입력하는 수련회 정보 카드 내용 (기본값은 기존 하드코딩 값과 동일)
+    // 관리자 페이지에서 직접 입력하는 수련회 정보 카드 내용 (기본값은 기존 하드코딩 값과 동일)
     const [retreatDate, setRetreatDate] = useState("2026. 8. 16 (주일) — 8. 18 (화)");
     const [retreatLocation, setRetreatLocation] = useState("삼은교회");
     const [retreatLocationDetail, setRetreatLocationDetail] = useState("충남 태안군 소원면 시목길 337");
@@ -74,7 +74,7 @@ export default function App() {
         return () => unsub();
     }, []);
 
-    // 🔴 카카오톡 공유 미리보기용 정적 페이지(/summercamp.html)를 거쳐 들어온 경우
+    // 카카오톡 공유 미리보기용 정적 페이지(/summercamp.html)를 거쳐 들어온 경우
     // 주소창을 원래 경로(/SummerCamp)로 조용히 정리 (서버 요청 없이 클라이언트에서만 처리)
     const navigate = useNavigate();
     const location = useLocation();
@@ -85,7 +85,7 @@ export default function App() {
     }, [location.pathname, navigate]);
 
     useEffect(() => {
-        // 🔴 서울 시간대 기준 실시간 카운트다운 계산 로직 함수
+        // 서울 시간대 기준 실시간 카운트다운 계산 로직 함수
         const calculateTimeLeft = () => {
             const targetDateStr = "2026-08-16T00:00:00+09:00"; // 서울 표준시(KST) 타겟 세팅
             const targetTime = new Date(targetDateStr).getTime();
@@ -111,7 +111,7 @@ export default function App() {
         return () => clearInterval(timer);
     }, []);
 
-    // 🔴 계좌번호 복사 함수 추가
+    // 계좌번호 복사 함수 추가
     const handleCopyAccount = (accountNumber: string) => {
         navigator.clipboard.writeText(accountNumber)
             .then(() => {
@@ -122,7 +122,7 @@ export default function App() {
             });
     };
 
-    // 🔴 수련회 전체 일정표 데이터 (일자별 타임라인)
+    // 수련회 전체 일정표 데이터 (일자별 타임라인)
     const scheduleData: { time: string; icon: string; label: string; highlight?: boolean }[][] = [
         [
             { time: "09:00", icon: "🚩", label: "은혜의 열기 속으로 출발!", highlight: true },
@@ -162,7 +162,7 @@ export default function App() {
         ],
     ];
 
-    // 🔴 관리자가 수련회 안내를 "사용안함"으로 꺼둔 경우, 직접 주소를 입력해 들어와도 준비중 화면만 노출
+    // 관리자가 수련회 안내를 "사용안함"으로 꺼둔 경우, 직접 주소를 입력해 들어와도 준비중 화면만 노출
     if (!retreatEnabled) {
         return (
             <div
@@ -241,7 +241,7 @@ export default function App() {
                 position: "relative"
             }}
         >
-            {/* 🔴 [추가] 웅웅거리며 부드럽게 번지는 토스/머티리얼 스타일의 글로우 애니메이션 주입 */}
+            {/* [추가] 웅웅거리며 부드럽게 번지는 토스/머티리얼 스타일의 글로우 애니메이션 주입 */}
             <style>{`
                 @keyframes pulseGlow {
                     0% {
@@ -277,7 +277,7 @@ export default function App() {
                 }
             `}</style>
 
-            {/* 🔴 박스 외부 좌측 상단 배치: 토스 스타일 원형 컨테이너 뒤로가기 버튼 */}
+            {/* 박스 외부 좌측 상단 배치: 토스 스타일 원형 컨테이너 뒤로가기 버튼 */}
             <button
                 onClick={() => window.location.href = "https://mannayouthbulletinonline.web.app/"}
                 style={{
@@ -374,7 +374,7 @@ export default function App() {
                         SUMMER RETREAT 2026
                     </div>
 
-                    {/* 🔴 [수정] 웅웅거리듯 은은하게 맥박 뛰는(Pulse Glow) 칩으로 개편하여 가독성과 직관성 최상으로 정돈 */}
+                    {/* [수정] 웅웅거리듯 은은하게 맥박 뛰는(Pulse Glow) 칩으로 개편하여 가독성과 직관성 최상으로 정돈 */}
                     <div
                         className={timeLeft.isOver ? "" : "glow-pulse-box"}
                         style={{
