@@ -2,10 +2,22 @@ import { Youtube, BookOpen } from "lucide-react";
 import { useState, useEffect } from "react"; // [수정] useState, useEffect 추가
 import { doc, getDoc } from "firebase/firestore"; // [수정] Firebase 함수 추가
 import { db } from "../../firebase";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function Worship() {
     // [수정] DB에서 가져온 URL을 저장할 상태 추가
     const [youtubeUrl, setYoutubeUrl] = useState("");
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    // 🔴 카카오톡 공유 미리보기(og:title)를 "/worship" 전용으로 바꾸기 위해
+    // worship.html(정적 페이지, og 태그 포함) → /worship-app 으로 리다이렉트된 뒤
+    // 여기서 다시 주소창을 /worship 으로 되돌림 (서버 재요청 없이 클라이언트 라우팅만 사용, 무한 루프 방지)
+    useEffect(() => {
+        if (location.pathname === '/worship-app') {
+            navigate('/worship', { replace: true });
+        }
+    }, [location.pathname, navigate]);
 
     // [수정] 페이지 로드 시 DB의 URL 데이터 불러오기
     useEffect(() => {

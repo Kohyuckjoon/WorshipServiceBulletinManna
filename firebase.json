@@ -12,8 +12,20 @@
         "destination": "/summercamp.html"
       },
       {
+        "source": "/worship",
+        "destination": "/worship.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        ]
       }
     ]
   }

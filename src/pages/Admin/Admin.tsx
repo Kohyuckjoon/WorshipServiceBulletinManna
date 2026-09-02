@@ -72,6 +72,13 @@ export default function Admin() {
     // 🔴 수련회 안내 사용 여부 (메인 화면 공지 배너 + /SummerCamp 접근 여부를 함께 제어)
     const [retreatEnabled, setRetreatEnabled] = useState(true);
 
+    // 🔴 찬양 링크(/worship) 전용 커버 이미지 (별도 문서 siteMeta/worshipCover, 카카오톡 공유 미리보기 + 페이지 상단 배너에 사용)
+    const [worshipCoverImageUrl, setWorshipCoverImageUrl] = useState("");
+    const [worshipCoverPreview, setWorshipCoverPreview] = useState("");
+    const [uploadingWorshipCover, setUploadingWorshipCover] = useState(false);
+    const [savingWorshipCover, setSavingWorshipCover] = useState(false);
+    const [worshipCoverSaved, setWorshipCoverSaved] = useState(false);
+
     // 🔴 수련회 정보 카드 (일시/장소/회비/문의/준비물/주의사항) - 기본값은 /SummerCamp의 기존 하드코딩 값과 동일
     const [retreatDate, setRetreatDate] = useState("2026. 8. 16 (주일) — 8. 18 (화)");
     const [retreatLocation, setRetreatLocation] = useState("삼은교회");
@@ -405,6 +412,63 @@ export default function Admin() {
             alert("포스터 저장에 실패했습니다.");
         } finally {
             setSavingPoster(false);
+        }
+    };
+
+    // 🔴 찬양 링크 커버 이미지 불러오기 (별도 문서 siteMeta/worshipCover)
+    useEffect(() => {
+        if (!user) return;
+        (async () => {
+            try {
+                const snap = await getDoc(doc(db, "siteMeta", "worshipCover"));
+                if (snap.exists()) {
+                    const url = snap.data().imageUrl || "";
+                    setWorshipCoverImageUrl(url);
+                    setWorshipCoverPreview(url);
+                }
+            } catch (err) {
+                console.error("찬양 커버 이미지 로드 실패:", err);
+            }
+        })();
+    }, [user]);
+
+    const handleWorshipCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingWorshipCover(true);
+        setWorshipCoverSaved(false);
+        try {
+            const dataUrl = await compressImageToDataUrl(file);
+            setWorshipCoverPreview(dataUrl);
+            setWorshipCoverImageUrl(dataUrl);
+        } catch (err) {
+            console.error("찬양 커버 이미지 처리 실패:", err);
+            alert("이미지를 처리하는 데 실패했습니다.");
+        } finally {
+            setUploadingWorshipCover(false);
+            e.target.value = "";
+        }
+    };
+
+    const handleRemoveWorshipCoverImage = () => {
+        setWorshipCoverImageUrl("");
+        setWorshipCoverPreview("");
+        setWorshipCoverSaved(false);
+    };
+
+    const handleSaveWorshipCover = async () => {
+        setSavingWorshipCover(true);
+        try {
+            await setDoc(doc(db, "siteMeta", "worshipCover"), {
+                imageUrl: worshipCoverImageUrl,
+                updatedAt: new Date()
+            }, { merge: true });
+            setWorshipCoverSaved(true);
+        } catch (err) {
+            console.error("찬양 커버 이미지 저장 실패:", err);
+            alert("저장에 실패했습니다.");
+        } finally {
+            setSavingWorshipCover(false);
         }
     };
 
@@ -1377,6 +1441,63 @@ export default function Admin() {
 
                                 <p className="text-[12px] font-medium text-[#ADB5BD] leading-snug px-1">
                                     이미지를 선택하면 자동으로 용량을 줄여 저장해요. 위 사용중/사용안함 상태와 포스터가 이 버튼 하나로 함께 저장돼요.
+                                </p>
+                            </div>
+                        </section>
+
+                        {/* 찬양 링크(/worship) 전용 커버 이미지 */}
+                        <section className="p-4 rounded-[20px] border-0 bg-white shadow-xl shadow-blue-500/5 transition-all animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <header className="flex items-center justify-between mb-3">
+                                <h2 className="text-[16px] font-bold flex items-center gap-3 text-[#191F28] tracking-tight">
+                                    <div className="w-1.5 h-[18px] bg-[#3182F6] rounded-full shadow-[0_0_12px_rgba(49,130,246,0.3)]"></div>
+                                    찬양 링크 커버 이미지
+                                </h2>
+                            </header>
+
+                            <div className="space-y-3">
+                                <p className="text-[12px] font-medium text-[#8B95A1] leading-snug px-1">
+                                    카카오톡으로 찬양 링크(/worship)를 공유할 때 보이는 미리보기 이미지예요. 페이지 상단 배너에도 함께 보여요.
+                                </p>
+                                <div className="flex items-center gap-4">
+                                    <div className="relative w-24 h-24 rounded-[16px] bg-[#F9FAFB] ring-1 ring-[#F2F4F6] overflow-hidden flex items-center justify-center shrink-0">
+                                        {worshipCoverPreview ? (
+                                            <>
+                                                <img src={worshipCoverPreview} alt="찬양 커버 미리보기" className="w-full h-full object-cover" />
+                                                <button
+                                                    onClick={handleRemoveWorshipCoverImage}
+                                                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-colors"
+                                                    title="이미지 삭제"
+                                                >
+                                                    <Trash2 size={12} className="text-white" />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <Image size={24} className="text-[#D1D8E0]" />
+                                        )}
+                                    </div>
+
+                                    <label className={`flex-1 h-12 rounded-[18px] ring-1 ring-[#F2F4F6] bg-[#F9FAFB] flex items-center justify-center gap-2 font-black text-[15px] transition-all text-center px-3 ${uploadingWorshipCover ? 'text-[#8B95A1] cursor-not-allowed' : 'text-[#3182F6] cursor-pointer hover:bg-white hover:ring-2 hover:ring-[#3182F6]'}`}>
+                                        {uploadingWorshipCover ? "이미지 처리 중..." : (worshipCoverPreview ? "이미지 다시 선택" : "커버 이미지 선택하기")}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            disabled={uploadingWorshipCover}
+                                            onChange={handleWorshipCoverFileChange}
+                                        />
+                                    </label>
+                                </div>
+
+                                <button
+                                    onClick={handleSaveWorshipCover}
+                                    disabled={savingWorshipCover || uploadingWorshipCover}
+                                    className="w-full h-12 rounded-[18px] bg-[#3182F6] text-white font-black text-[15px] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+                                >
+                                    {savingWorshipCover ? "저장 중..." : worshipCoverSaved ? "저장됨 ✓" : "커버 이미지 저장하기"}
+                                </button>
+
+                                <p className="text-[12px] font-medium text-[#ADB5BD] leading-snug px-1">
+                                    ⚠️ 카카오톡 미리보기 이미지는 저장 후 사이트를 다시 배포해야 실제로 바뀌어요. 페이지 상단 배너는 저장 즉시 바로 반영돼요.
                                 </p>
                             </div>
                         </section>

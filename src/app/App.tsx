@@ -850,6 +850,7 @@ export default function App() {
         <Route path="/SummerCamp" element={<Summer />} />
         <Route path="/summercamp-app" element={<Summer />} />
         <Route path="/worship" element={<Worship />} />
+        <Route path="/worship-app" element={<Worship />} />
       </Routes>
     </BrowserRouter>
   );
