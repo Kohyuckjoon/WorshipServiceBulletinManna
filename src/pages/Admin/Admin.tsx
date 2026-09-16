@@ -1009,7 +1009,7 @@ export default function Admin() {
                                                     🔗{" "}
                                                     {item.modalSource === "creed" && "신앙고백 내용과 연동"}
                                                     {item.modalSource === "confession" && "예배자의 고백과 연동"}
-                                                    {item.dynamicSource === "preacher" && "설교자와 연동"}
+                                                    {item.dynamicSource === "preacher" && "설교자 · 본문 구절과 연동"}
                                                     {item.dynamicSource === "newsInCharge" && "소식담당자와 연동"}
                                                     {item.dynamicSource === "benedictionBy" && "축도자와 연동"}
                                                 </div>

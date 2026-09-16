@@ -483,10 +483,25 @@ export default function Home() {
                                             ? (bulletin?.[item.dynamicSource] || item.value)
                                             : item.value;
 
+                                        // 말씀 선포(설교자 연동) 항목은 이름 아래에 본문 구절도 함께 표시
+                                        if (item.dynamicSource === "preacher") {
+                                            return (
+                                                <div key={item.key || idx} className="flex justify-between items-start">
+                                                    <span className="opacity-90 font-[Arita_Dotum_KR] text-[15px] pt-0.5">{item.label}</span>
+                                                    <div className="flex flex-col items-end gap-0.5">
+                                                        <span className="font-black font-[Arita_Dotum_KR] text-[16px]">{displayValue}</span>
+                                                        {bulletin?.scripture && (
+                                                            <span className="opacity-70 font-[Arita_Dotum_KR] text-[13px]">{bulletin.scripture}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+
                                         return (
                                             <div key={item.key || idx} className="flex justify-between items-center">
                                                 <span className="opacity-90 font-[Arita_Dotum_KR] text-[15px]">{item.label}</span>
-                                                <span className={item.dynamicSource === "preacher" ? "font-black font-[Arita_Dotum_KR] text-[16px]" : "font-bold font-[Arita_Dotum_KR] text-[15px]"}>
+                                                <span className="font-bold font-[Arita_Dotum_KR] text-[15px]">
                                                     {displayValue}
                                                 </span>
                                             </div>
