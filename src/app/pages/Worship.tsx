@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 export default function Worship() {
     // [수정] DB에서 가져온 URL을 저장할 상태 추가
     const [youtubeUrl, setYoutubeUrl] = useState("");
+    const [praiseBtn, setPraiseBtn] = useState({ enabled: false, label: "", url: "" });
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -39,6 +40,22 @@ export default function Worship() {
             }
         };
         fetchUrl();
+    }, []);
+
+    // 관리자페이지 "찬양 예배 버튼" 설정 (siteMeta/worshipPage)
+    useEffect(() => {
+        const fetchPraiseBtn = async () => {
+            try {
+                const snap = await getDoc(doc(db, "siteMeta", "worshipPage"));
+                if (snap.exists()) {
+                    const d = snap.data();
+                    setPraiseBtn({ enabled: !!d.praiseBtnEnabled, label: d.praiseBtnLabel || "", url: d.praiseBtnUrl || "" });
+                }
+            } catch (error) {
+                console.error("찬양 예배 버튼 설정 로드 실패:", error);
+            }
+        };
+        fetchPraiseBtn();
     }, []);
 
     useEffect(() => {
@@ -74,6 +91,17 @@ export default function Worship() {
                     >
                         유튜브 찬양 바로가기
                     </a>
+
+                    {praiseBtn.enabled && praiseBtn.url && (
+                        <a
+                            href={/^https?:\/\//.test(praiseBtn.url) ? praiseBtn.url : `https://${praiseBtn.url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-full h-[56px] bg-[#3182F6] text-white rounded-[16px] font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                        >
+                            {praiseBtn.label || "찬양 예배 바로가기"}
+                        </a>
+                    )}
 
                     {/* [수정: 빨간색] 온라인 주보 버튼: 부드러운 Secondary 스타일 추가 */}
                     <a

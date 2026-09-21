@@ -79,6 +79,13 @@ export default function Admin() {
     const [savingWorshipCover, setSavingWorshipCover] = useState(false);
     const [worshipCoverSaved, setWorshipCoverSaved] = useState(false);
 
+    // 🔴 /worship "찬양 예배 바로가기" 버튼 (별도 문서 siteMeta/worshipPage, on일 때만 /worship에 버튼 표시)
+    const [praiseBtnEnabled, setPraiseBtnEnabled] = useState(false);
+    const [praiseBtnLabel, setPraiseBtnLabel] = useState("");
+    const [praiseBtnUrl, setPraiseBtnUrl] = useState("");
+    const [savingPraiseBtn, setSavingPraiseBtn] = useState(false);
+    const [praiseBtnSaved, setPraiseBtnSaved] = useState(false);
+
     // 🔴 수련회 정보 카드 (일시/장소/회비/문의/준비물/주의사항) - 기본값은 /SummerCamp의 기존 하드코딩 값과 동일
     const [retreatDate, setRetreatDate] = useState("2026. 8. 16 (주일) — 8. 18 (화)");
     const [retreatLocation, setRetreatLocation] = useState("삼은교회");
@@ -469,6 +476,41 @@ export default function Admin() {
             alert("저장에 실패했습니다.");
         } finally {
             setSavingWorshipCover(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!user) return;
+        (async () => {
+            try {
+                const snap = await getDoc(doc(db, "siteMeta", "worshipPage"));
+                if (snap.exists()) {
+                    const data = snap.data();
+                    setPraiseBtnEnabled(!!data.praiseBtnEnabled);
+                    setPraiseBtnLabel(data.praiseBtnLabel || "");
+                    setPraiseBtnUrl(data.praiseBtnUrl || "");
+                }
+            } catch (err) {
+                console.error("찬양 예배 버튼 설정 로드 실패:", err);
+            }
+        })();
+    }, [user]);
+
+    const handleSavePraiseBtn = async () => {
+        setSavingPraiseBtn(true);
+        try {
+            await setDoc(doc(db, "siteMeta", "worshipPage"), {
+                praiseBtnEnabled,
+                praiseBtnLabel: praiseBtnLabel.trim(),
+                praiseBtnUrl: praiseBtnUrl.trim(),
+                updatedAt: new Date()
+            }, { merge: true });
+            setPraiseBtnSaved(true);
+        } catch (err) {
+            console.error("찬양 예배 버튼 설정 저장 실패:", err);
+            alert("저장에 실패했습니다.");
+        } finally {
+            setSavingPraiseBtn(false);
         }
     };
 
@@ -1498,6 +1540,61 @@ export default function Admin() {
 
                                 <p className="text-[12px] font-medium text-[#ADB5BD] leading-snug px-1">
                                     ⚠️ 카카오톡 미리보기 이미지는 저장 후 사이트를 다시 배포해야 실제로 바뀌어요. 페이지 상단 배너는 저장 즉시 바로 반영돼요.
+                                </p>
+                            </div>
+                        </section>
+
+                        {/* 찬양 링크(/worship) "찬양 예배 바로가기" 버튼 on/off */}
+                        <section className="p-4 rounded-[20px] border-0 bg-white shadow-xl shadow-blue-500/5 transition-all animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <header className="flex items-center justify-between mb-3">
+                                <h2 className="text-[16px] font-bold flex items-center gap-3 text-[#191F28] tracking-tight whitespace-nowrap">
+                                    <div className="w-1.5 h-[18px] bg-[#3182F6] rounded-full shadow-[0_0_12px_rgba(49,130,246,0.3)] shrink-0"></div>
+                                    찬양 예배 버튼
+                                </h2>
+                                <div className="flex items-center gap-3 bg-[#F9FAFB] px-3 py-1.5 rounded-full border border-[#F2F4F6] shrink-0">
+                                    <span className={`text-[13px] font-black whitespace-nowrap transition-colors ${praiseBtnEnabled ? 'text-[#3182F6]' : 'text-[#8B95A1]'}`}>
+                                        {praiseBtnEnabled ? '사용중' : '사용안함'}
+                                    </span>
+                                    <button
+                                        onClick={() => { setPraiseBtnEnabled(!praiseBtnEnabled); setPraiseBtnSaved(false); }}
+                                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 shrink-0 ${praiseBtnEnabled ? 'bg-[#3182F6]' : 'bg-[#E5E8EB]'}`}
+                                    >
+                                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-all duration-300 ${praiseBtnEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                    </button>
+                                </div>
+                            </header>
+
+                            <div className="space-y-3">
+                                <p className="text-[12px] font-medium text-[#8B95A1] leading-snug px-1">
+                                    켜면 /worship 화면의 "유튜브 찬양 바로가기" 아래에 버튼이 생겨요. 끄면 사라져요.
+                                </p>
+                                <div className="space-y-1.5">
+                                    <label className="text-[12px] font-bold text-[#8B95A1] ml-1">버튼 이름 (비우면 "찬양 예배 바로가기")</label>
+                                    <input
+                                        className="w-full h-12 bg-[#F9FAFB] border-0 ring-1 ring-[#F2F4F6] px-4 rounded-[14px] outline-none focus:ring-2 focus:ring-[#3182F6] font-medium text-[15px] text-[#191F28] transition-all placeholder:text-[#D1D8E0]"
+                                        placeholder="찬양 예배 바로가기"
+                                        value={praiseBtnLabel}
+                                        onChange={(e) => { setPraiseBtnLabel(e.target.value); setPraiseBtnSaved(false); }}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[12px] font-bold text-[#8B95A1] ml-1">이동할 URL</label>
+                                    <input
+                                        className="w-full h-12 bg-[#F9FAFB] border-0 ring-1 ring-[#F2F4F6] px-4 rounded-[14px] outline-none focus:ring-2 focus:ring-[#3182F6] font-medium text-[15px] text-[#191F28] transition-all placeholder:text-[#D1D8E0]"
+                                        placeholder="https://..."
+                                        value={praiseBtnUrl}
+                                        onChange={(e) => { setPraiseBtnUrl(e.target.value); setPraiseBtnSaved(false); }}
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleSavePraiseBtn}
+                                    disabled={savingPraiseBtn}
+                                    className="w-full h-12 rounded-[18px] bg-[#3182F6] text-white font-black text-[15px] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+                                >
+                                    {savingPraiseBtn ? "저장 중..." : praiseBtnSaved ? "저장됨 ✓" : "저장하기"}
+                                </button>
+                                <p className="text-[12px] font-medium text-[#ADB5BD] leading-snug px-1">
+                                    이 버튼으로 저장하면 바로 반영돼요. "주보 발행하기"와는 별개예요. URL이 비어 있으면 켜져 있어도 버튼이 보이지 않아요.
                                 </p>
                             </div>
                         </section>
