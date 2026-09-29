@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { db, auth } from '../firebase';
 import { doc, updateDoc, getDoc, setDoc, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { buildExpiryDate } from "../utils/expiryDate";
 
 // 데이터 타입 정의 (에러 방지의 핵심)
 export interface ChurchNewsItem {
@@ -77,6 +78,14 @@ export const useAdminData = () => {
     const [adBannerLinks, setAdBannerLinks] = useState<AdBannerLinkItem[]>([]);
     const [newBannerLinkLabel, setNewBannerLinkLabel] = useState("");
     const [newBannerLinkUrl, setNewBannerLinkUrl] = useState("");
+
+    // 광고 배너 노출 마감 시각 (지나면 Home 화면에서 즉시 숨김, 관리자 페이지는 다음 접속 때 토글 자동 off)
+    const [adBannerExpiryEnabled, setAdBannerExpiryEnabled] = useState(false);
+    const [adBannerExpiryDate, setAdBannerExpiryDate] = useState(""); // "YYYY-MM-DD"
+    const [adBannerExpiryHour, setAdBannerExpiryHour] = useState("24");
+    const [adBannerExpiryMinute, setAdBannerExpiryMinute] = useState("00");
+    const [adBannerExpirySecond, setAdBannerExpirySecond] = useState("00");
+    const [adBannerAutoDisabledNotice, setAdBannerAutoDisabledNotice] = useState(false);
 
     // ✅ 2. 상태 정의 시 타입을 명시 (useState<타입[]>)
     const [churchNews, setChurchNews] = useState<ChurchNewsItem[]>([]);
@@ -221,7 +230,6 @@ export const useAdminData = () => {
                         setPsalms(data.psalms || "");
                         setWorshipperConfession(data.worshipperConfession || "");
                         setWorshipOrder(data.worshipOrder && data.worshipOrder.length > 0 ? data.worshipOrder : defaultWorshipOrder);
-                        setAdBannerEnabled(data.adBannerEnabled || false);
                         setAdBannerTitle(data.adBannerTitle || "");
                         setAdBannerDescription(data.adBannerDescription || "");
                         // adBannerLinks가 없고 예전 단일 링크(adBannerLinkUrl)만 있는 경우 자동 이관
@@ -232,6 +240,28 @@ export const useAdminData = () => {
                         } else {
                             setAdBannerLinks([]);
                         }
+
+                        // 광고 배너 노출 마감 설정 불러오기
+                        let bannerEnabled = data.adBannerEnabled || false;
+                        const bannerExpiryEnabled = !!data.adBannerExpiryEnabled;
+                        const bannerExpiryAt = data.adBannerExpiryAt ? new Date(data.adBannerExpiryAt) : null;
+                        setAdBannerExpiryEnabled(bannerExpiryEnabled);
+                        if (bannerExpiryAt) {
+                            const y = bannerExpiryAt.getFullYear();
+                            const mo = String(bannerExpiryAt.getMonth() + 1).padStart(2, "0");
+                            const d = String(bannerExpiryAt.getDate()).padStart(2, "0");
+                            setAdBannerExpiryDate(`${y}-${mo}-${d}`);
+                            setAdBannerExpiryHour(String(bannerExpiryAt.getHours()).padStart(2, "0"));
+                            setAdBannerExpiryMinute(String(bannerExpiryAt.getMinutes()).padStart(2, "0"));
+                            setAdBannerExpirySecond(String(bannerExpiryAt.getSeconds()).padStart(2, "0"));
+                        }
+                        // 마감 시각이 이미 지났다면 관리자 페이지 접속 시점에 자동으로 사용안함으로 전환 + 즉시 저장
+                        if (bannerEnabled && bannerExpiryEnabled && bannerExpiryAt && bannerExpiryAt.getTime() <= Date.now()) {
+                            bannerEnabled = false;
+                            setAdBannerAutoDisabledNotice(true);
+                            await setDoc(doc(db, "bulletin", "current"), { adBannerEnabled: false }, { merge: true });
+                        }
+                        setAdBannerEnabled(bannerEnabled);
                     }
                 } catch (error) { console.error(error); }
             };
@@ -241,6 +271,11 @@ export const useAdminData = () => {
 
     // ✅ 주보 발행(업데이트) 함수
     const handleUpdate = async () => {
+        if (!date) {
+            setErrorMessage("예배 날짜(발행일)를 먼저 선택해 주세요.");
+            setShowLoginError(true);
+            return;
+        }
         try {
             setLoading(true);
 
@@ -264,6 +299,10 @@ export const useAdminData = () => {
                 adBannerTitle,
                 adBannerDescription,
                 adBannerLinks,
+                adBannerExpiryEnabled,
+                adBannerExpiryAt: adBannerExpiryEnabled
+                    ? buildExpiryDate(adBannerExpiryDate, adBannerExpiryHour, adBannerExpiryMinute, adBannerExpirySecond)?.toISOString() || null
+                    : null,
                 updatedAt: new Date()
             };
 
@@ -274,6 +313,7 @@ export const useAdminData = () => {
             await setDoc(doc(db, "bulletin_history", date), bulletinData);
 
             setFixedDate(date);
+            setAdBannerAutoDisabledNotice(false);
             setShowUpdateSuccess(true);
         } catch (error) {
             console.error("저장 중 에러 발생:", error);
@@ -353,5 +393,11 @@ export const useAdminData = () => {
         adBannerLinks, setAdBannerLinks,
         newBannerLinkLabel, setNewBannerLinkLabel,
         newBannerLinkUrl, setNewBannerLinkUrl,
+        adBannerExpiryEnabled, setAdBannerExpiryEnabled,
+        adBannerExpiryDate, setAdBannerExpiryDate,
+        adBannerExpiryHour, setAdBannerExpiryHour,
+        adBannerExpiryMinute, setAdBannerExpiryMinute,
+        adBannerExpirySecond, setAdBannerExpirySecond,
+        adBannerAutoDisabledNotice, setAdBannerAutoDisabledNotice,
     };
 };

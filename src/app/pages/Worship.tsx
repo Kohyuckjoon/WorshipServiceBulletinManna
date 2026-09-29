@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"; // [수정] useState, useEffect 추
 import { doc, getDoc } from "firebase/firestore"; // [수정] Firebase 함수 추가
 import { db } from "../../firebase";
 import { useLocation, useNavigate } from "react-router-dom";
+import { isExpired } from "../../utils/expiryDate";
 
 export default function Worship() {
     // [수정] DB에서 가져온 URL을 저장할 상태 추가
@@ -49,7 +50,9 @@ export default function Worship() {
                 const snap = await getDoc(doc(db, "siteMeta", "worshipPage"));
                 if (snap.exists()) {
                     const d = snap.data();
-                    setPraiseBtn({ enabled: !!d.praiseBtnEnabled, label: d.praiseBtnLabel || "", url: d.praiseBtnUrl || "" });
+                    // 노출 마감 시각이 지났으면 켜져 있어도 즉시 숨김 (방문할 때마다 실시간으로 판단)
+                    const expired = isExpired(d.praiseBtnExpiryEnabled, d.praiseBtnExpiryAt);
+                    setPraiseBtn({ enabled: !!d.praiseBtnEnabled && !expired, label: d.praiseBtnLabel || "", url: d.praiseBtnUrl || "" });
                 }
             } catch (error) {
                 console.error("찬양 예배 버튼 설정 로드 실패:", error);

@@ -5,9 +5,11 @@ import {
     MessageSquare, Quote, Eye, EyeOff, Check, Info, Music, Megaphone, Link2, Image
 } from "lucide-react";
 import LoginForm from './LoginForm';
+import ExpiryDatePicker from './ExpiryDatePicker';
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
 import { doc, getDoc, setDoc, collection, addDoc, updateDoc, deleteDoc, getDocs, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { buildExpiryDate, isExpired } from '../../utils/expiryDate';
 
 // 🔴 이미지를 Firestore 문서에 그대로 저장할 수 있도록 브라우저에서 리사이즈+압축 (Storage 미사용, 완전 무료)
 const compressImageToDataUrl = (file: File, maxBytes = 700000): Promise<string> => {
@@ -86,6 +88,19 @@ export default function Admin() {
     const [savingPraiseBtn, setSavingPraiseBtn] = useState(false);
     const [praiseBtnSaved, setPraiseBtnSaved] = useState(false);
 
+    // 🔴 찬양 예배 버튼 노출 마감 시각 (지나면 /worship에서 즉시 숨김, 관리자 페이지는 다음 접속 때 토글 자동 off)
+    const [praiseBtnExpiryEnabled, setPraiseBtnExpiryEnabled] = useState(false);
+    const [praiseBtnExpiryDate, setPraiseBtnExpiryDate] = useState(""); // "YYYY-MM-DD"
+    const [praiseBtnExpiryHour, setPraiseBtnExpiryHour] = useState("24");
+    const [praiseBtnExpiryMinute, setPraiseBtnExpiryMinute] = useState("00");
+    const [praiseBtnExpirySecond, setPraiseBtnExpirySecond] = useState("00");
+    const [nowTick, setNowTick] = useState(new Date());
+    const [autoDisabledNotice, setAutoDisabledNotice] = useState(false);
+
+    // 🔴 광고 배너 저장 (bulletin/current 문서 중 광고 배너 관련 필드만 즉시 저장, "주보 발행하기"와 별개)
+    const [savingAdBanner, setSavingAdBanner] = useState(false);
+    const [adBannerSaved, setAdBannerSaved] = useState(false);
+
     // 🔴 수련회 정보 카드 (일시/장소/회비/문의/준비물/주의사항) - 기본값은 /SummerCamp의 기존 하드코딩 값과 동일
     const [retreatDate, setRetreatDate] = useState("2026. 8. 16 (주일) — 8. 18 (화)");
     const [retreatLocation, setRetreatLocation] = useState("삼은교회");
@@ -137,6 +152,12 @@ export default function Admin() {
         adBannerLinks, setAdBannerLinks,
         newBannerLinkLabel, setNewBannerLinkLabel,
         newBannerLinkUrl, setNewBannerLinkUrl,
+        adBannerExpiryEnabled, setAdBannerExpiryEnabled,
+        adBannerExpiryDate, setAdBannerExpiryDate,
+        adBannerExpiryHour, setAdBannerExpiryHour,
+        adBannerExpiryMinute, setAdBannerExpiryMinute,
+        adBannerExpirySecond, setAdBannerExpirySecond,
+        adBannerAutoDisabledNotice, setAdBannerAutoDisabledNotice,
 
         // 주보 상세 컨텐츠
         churchNews, setChurchNews, newNewsTitle, setNewNewsTitle, newNewsContent, setNewNewsContent,
@@ -486,9 +507,30 @@ export default function Admin() {
                 const snap = await getDoc(doc(db, "siteMeta", "worshipPage"));
                 if (snap.exists()) {
                     const data = snap.data();
-                    setPraiseBtnEnabled(!!data.praiseBtnEnabled);
+                    let enabled = !!data.praiseBtnEnabled;
+                    const expiryEnabled = !!data.praiseBtnExpiryEnabled;
+                    const expiryAt = data.praiseBtnExpiryAt ? new Date(data.praiseBtnExpiryAt) : null;
+
                     setPraiseBtnLabel(data.praiseBtnLabel || "");
                     setPraiseBtnUrl(data.praiseBtnUrl || "");
+                    setPraiseBtnExpiryEnabled(expiryEnabled);
+                    if (expiryAt) {
+                        const y = expiryAt.getFullYear();
+                        const mo = String(expiryAt.getMonth() + 1).padStart(2, "0");
+                        const d = String(expiryAt.getDate()).padStart(2, "0");
+                        setPraiseBtnExpiryDate(`${y}-${mo}-${d}`);
+                        setPraiseBtnExpiryHour(String(expiryAt.getHours()).padStart(2, "0"));
+                        setPraiseBtnExpiryMinute(String(expiryAt.getMinutes()).padStart(2, "0"));
+                        setPraiseBtnExpirySecond(String(expiryAt.getSeconds()).padStart(2, "0"));
+                    }
+
+                    // 마감 시각이 이미 지났다면 관리자 페이지 접속 시점에 자동으로 사용안함으로 전환 + 즉시 저장
+                    if (enabled && expiryEnabled && expiryAt && expiryAt.getTime() <= Date.now()) {
+                        enabled = false;
+                        setAutoDisabledNotice(true);
+                        await setDoc(doc(db, "siteMeta", "worshipPage"), { praiseBtnEnabled: false }, { merge: true });
+                    }
+                    setPraiseBtnEnabled(enabled);
                 }
             } catch (err) {
                 console.error("찬양 예배 버튼 설정 로드 실패:", err);
@@ -496,21 +538,57 @@ export default function Admin() {
         })();
     }, [user]);
 
+    // 실시간 현재 시각 (1초마다 갱신)
+    useEffect(() => {
+        const timer = setInterval(() => setNowTick(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
     const handleSavePraiseBtn = async () => {
         setSavingPraiseBtn(true);
         try {
+            const expiryAt = praiseBtnExpiryEnabled
+                ? buildExpiryDate(praiseBtnExpiryDate, praiseBtnExpiryHour, praiseBtnExpiryMinute, praiseBtnExpirySecond)
+                : null;
             await setDoc(doc(db, "siteMeta", "worshipPage"), {
                 praiseBtnEnabled,
                 praiseBtnLabel: praiseBtnLabel.trim(),
                 praiseBtnUrl: praiseBtnUrl.trim(),
+                praiseBtnExpiryEnabled,
+                praiseBtnExpiryAt: expiryAt ? expiryAt.toISOString() : null,
                 updatedAt: new Date()
             }, { merge: true });
+            setAutoDisabledNotice(false);
             setPraiseBtnSaved(true);
         } catch (err) {
             console.error("찬양 예배 버튼 설정 저장 실패:", err);
             alert("저장에 실패했습니다.");
         } finally {
             setSavingPraiseBtn(false);
+        }
+    };
+
+    const handleSaveAdBanner = async () => {
+        setSavingAdBanner(true);
+        try {
+            const expiryAt = adBannerExpiryEnabled
+                ? buildExpiryDate(adBannerExpiryDate, adBannerExpiryHour, adBannerExpiryMinute, adBannerExpirySecond)
+                : null;
+            await setDoc(doc(db, "bulletin", "current"), {
+                adBannerEnabled,
+                adBannerTitle: adBannerTitle.trim(),
+                adBannerDescription: adBannerDescription.trim(),
+                adBannerLinks,
+                adBannerExpiryEnabled,
+                adBannerExpiryAt: expiryAt ? expiryAt.toISOString() : null,
+            }, { merge: true });
+            setAdBannerAutoDisabledNotice(false);
+            setAdBannerSaved(true);
+        } catch (err) {
+            console.error("광고 배너 저장 실패:", err);
+            alert("저장에 실패했습니다.");
+        } finally {
+            setSavingAdBanner(false);
         }
     };
 
@@ -1134,13 +1212,20 @@ export default function Admin() {
                                         {adBannerEnabled ? '사용중' : '사용안함'}
                                     </span>
                                     <button
-                                        onClick={() => setAdBannerEnabled(!adBannerEnabled)}
+                                        onClick={() => { setAdBannerEnabled(!adBannerEnabled); setAdBannerSaved(false); }}
                                         className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 ${adBannerEnabled ? 'bg-[#3182F6]' : 'bg-[#E5E8EB]'}`}
                                     >
                                         <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-all duration-300 ${adBannerEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
                                     </button>
                                 </div>
                             </header>
+
+                            {adBannerAutoDisabledNotice && (
+                                <div className="flex items-center gap-2 bg-[#FFF4E6] border border-[#FFE1B3] rounded-[14px] px-3 py-2.5 mb-3">
+                                    <AlertCircle size={16} className="text-[#F59E0B] shrink-0" />
+                                    <p className="text-[12px] font-bold text-[#B45309] leading-snug">설정해둔 마감 시각이 지나서 자동으로 사용안함으로 전환됐어요.</p>
+                                </div>
+                            )}
 
                             <div className={`space-y-3 transition-all duration-500 ${adBannerEnabled ? 'opacity-100' : 'opacity-30 grayscale pointer-events-none'}`}>
                                 <div className="space-y-3 group">
@@ -1150,7 +1235,7 @@ export default function Admin() {
                                     <input
                                         type="text"
                                         value={adBannerTitle}
-                                        onChange={(e) => setAdBannerTitle(e.target.value)}
+                                        onChange={(e) => { setAdBannerTitle(e.target.value); setAdBannerSaved(false); }}
                                         placeholder="예: 2026 여름 수련회 신청 안내"
                                         className="w-full h-12 bg-[#F9FAFB] border-0 rounded-[18px] px-5 text-[16px] font-medium text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
                                     />
@@ -1163,7 +1248,7 @@ export default function Admin() {
                                     <input
                                         type="text"
                                         value={adBannerDescription}
-                                        onChange={(e) => setAdBannerDescription(e.target.value)}
+                                        onChange={(e) => { setAdBannerDescription(e.target.value); setAdBannerSaved(false); }}
                                         placeholder="예: 지금 바로 신청하세요"
                                         className="w-full h-12 bg-[#F9FAFB] border-0 rounded-[18px] px-5 text-[16px] font-medium text-[#191F28] outline-none ring-1 ring-[#F2F4F6] focus:ring-2 focus:ring-[#3182F6] focus:bg-white transition-all placeholder:text-[#D1D8E0]"
                                     />
@@ -1190,6 +1275,7 @@ export default function Admin() {
                                                                 const updated = [...adBannerLinks];
                                                                 updated[idx] = { ...updated[idx], label: e.target.value };
                                                                 setAdBannerLinks(updated);
+                                                                setAdBannerSaved(false);
                                                             }}
                                                             placeholder="라벨 (예: 1일차 집회)"
                                                             className="w-full h-10 bg-white border-0 ring-1 ring-[#E5E8EB] px-3 rounded-[10px] outline-none focus:ring-2 focus:ring-[#3182F6] font-medium text-[13px] text-[#191F28] placeholder:text-[#D1D8E0]"
@@ -1201,13 +1287,14 @@ export default function Admin() {
                                                                 const updated = [...adBannerLinks];
                                                                 updated[idx] = { ...updated[idx], url: e.target.value };
                                                                 setAdBannerLinks(updated);
+                                                                setAdBannerSaved(false);
                                                             }}
                                                             placeholder="https://..."
                                                             className="w-full h-10 bg-white border-0 ring-1 ring-[#E5E8EB] px-3 rounded-[10px] outline-none focus:ring-2 focus:ring-[#3182F6] font-medium text-[13px] text-[#4E5968] placeholder:text-[#D1D8E0]"
                                                         />
                                                     </div>
                                                     <button
-                                                        onClick={() => setAdBannerLinks(adBannerLinks.filter((_, i) => i !== idx))}
+                                                        onClick={() => { setAdBannerLinks(adBannerLinks.filter((_, i) => i !== idx)); setAdBannerSaved(false); }}
                                                         className="w-10 h-10 flex items-center justify-center text-[#F04452] hover:bg-[#FFF0F1] rounded-full transition-all shrink-0"
                                                     >
                                                         <Trash2 size={16} />
@@ -1240,6 +1327,7 @@ export default function Admin() {
                                                 setAdBannerLinks([...adBannerLinks, { label: newBannerLinkLabel.trim(), url: newBannerLinkUrl.trim() }]);
                                                 setNewBannerLinkLabel("");
                                                 setNewBannerLinkUrl("");
+                                                setAdBannerSaved(false);
                                             }}
                                             className="h-12 px-4 bg-[#3182F6] text-white rounded-[14px] font-black text-[14px] flex items-center justify-center gap-1 active:scale-[0.98] hover:bg-[#1B64DA] transition-all shrink-0"
                                         >
@@ -1257,6 +1345,33 @@ export default function Admin() {
                                         사용 토글을 켜고 배너 제목을 입력하면 메인 화면 헤더 바로 아래에 배너가 노출되며, 클릭 시 새 탭에서 링크로 이동합니다.
                                     </p>
                                 </div>
+                            </div>
+
+                            <div className="mt-3 space-y-3">
+                                <ExpiryDatePicker
+                                    enabled={adBannerExpiryEnabled}
+                                    onEnabledChange={(v) => { setAdBannerExpiryEnabled(v); setAdBannerSaved(false); }}
+                                    dateStr={adBannerExpiryDate}
+                                    onDateChange={(v) => { setAdBannerExpiryDate(v); setAdBannerSaved(false); }}
+                                    hour={adBannerExpiryHour}
+                                    onHourChange={(v) => { setAdBannerExpiryHour(v); setAdBannerSaved(false); }}
+                                    minute={adBannerExpiryMinute}
+                                    onMinuteChange={(v) => { setAdBannerExpiryMinute(v); setAdBannerSaved(false); }}
+                                    second={adBannerExpirySecond}
+                                    onSecondChange={(v) => { setAdBannerExpirySecond(v); setAdBannerSaved(false); }}
+                                    now={nowTick}
+                                />
+
+                                <button
+                                    onClick={handleSaveAdBanner}
+                                    disabled={savingAdBanner}
+                                    className="w-full h-12 rounded-[18px] bg-[#3182F6] text-white font-black text-[15px] disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] transition-all"
+                                >
+                                    {savingAdBanner ? "저장 중..." : adBannerSaved ? "저장됨 ✓" : "저장하기"}
+                                </button>
+                                <p className="text-[12px] font-medium text-[#ADB5BD] leading-snug px-1">
+                                    이 버튼으로 저장하면 바로 반영돼요. "주보 발행하기"와는 별개예요. 노출 마감 날짜는 체크박스를 켜고 저장까지 눌러야 적용되고, 그 시각이 지나면 메인 화면에서는 바로 배너가 사라져요. 관리자 페이지의 토글은 다음에 접속했을 때 자동으로 사용안함으로 바뀌고 저장돼요.
+                                </p>
                             </div>
                         </section>
 
@@ -1564,7 +1679,13 @@ export default function Admin() {
                                 </div>
                             </header>
 
-                            <div className="space-y-3">
+            <div className="space-y-3">
+                                {autoDisabledNotice && (
+                                    <div className="flex items-center gap-2 bg-[#FFF4E6] border border-[#FFE1B3] rounded-[14px] px-3 py-2.5">
+                                        <AlertCircle size={16} className="text-[#F59E0B] shrink-0" />
+                                        <p className="text-[12px] font-bold text-[#B45309] leading-snug">설정해둔 마감 시각이 지나서 자동으로 사용안함으로 전환됐어요.</p>
+                                    </div>
+                                )}
                                 <p className="text-[12px] font-medium text-[#8B95A1] leading-snug px-1">
                                     켜면 /worship 화면의 "유튜브 찬양 바로가기" 아래에 버튼이 생겨요. 끄면 사라져요.
                                 </p>
@@ -1586,6 +1707,22 @@ export default function Admin() {
                                         onChange={(e) => { setPraiseBtnUrl(e.target.value); setPraiseBtnSaved(false); }}
                                     />
                                 </div>
+
+                                <ExpiryDatePicker
+                                    enabled={praiseBtnExpiryEnabled}
+                                    onEnabledChange={(v) => { setPraiseBtnExpiryEnabled(v); setPraiseBtnSaved(false); }}
+                                    dateStr={praiseBtnExpiryDate}
+                                    onDateChange={(v) => { setPraiseBtnExpiryDate(v); setPraiseBtnSaved(false); }}
+                                    hour={praiseBtnExpiryHour}
+                                    onHourChange={(v) => { setPraiseBtnExpiryHour(v); setPraiseBtnSaved(false); }}
+                                    minute={praiseBtnExpiryMinute}
+                                    onMinuteChange={(v) => { setPraiseBtnExpiryMinute(v); setPraiseBtnSaved(false); }}
+                                    second={praiseBtnExpirySecond}
+                                    onSecondChange={(v) => { setPraiseBtnExpirySecond(v); setPraiseBtnSaved(false); }}
+                                    now={nowTick}
+                                />
+
+
                                 <button
                                     onClick={handleSavePraiseBtn}
                                     disabled={savingPraiseBtn}
@@ -1594,7 +1731,7 @@ export default function Admin() {
                                     {savingPraiseBtn ? "저장 중..." : praiseBtnSaved ? "저장됨 ✓" : "저장하기"}
                                 </button>
                                 <p className="text-[12px] font-medium text-[#ADB5BD] leading-snug px-1">
-                                    이 버튼으로 저장하면 바로 반영돼요. "주보 발행하기"와는 별개예요. URL이 비어 있으면 켜져 있어도 버튼이 보이지 않아요.
+                                    이 버튼으로 저장하면 바로 반영돼요. "주보 발행하기"와는 별개예요. URL이 비어 있으면 켜져 있어도 버튼이 보이지 않아요. 노출 마감 날짜는 체크박스를 켜고 저장까지 눌러야 적용되고, 그 시각이 지나면 /worship 화면에서는 바로 버튼이 사라져요. 관리자 페이지의 토글은 다음에 접속했을 때 자동으로 사용안함으로 바뀌고 저장돼요.
                                 </p>
                             </div>
                         </section>

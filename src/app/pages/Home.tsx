@@ -4,6 +4,7 @@ import { doc, onSnapshot, collection, query, orderBy } from "firebase/firestore"
 import { Lock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { defaultWorshipOrder } from '../../hooks/useAdminData';
+import { isExpired } from '../../utils/expiryDate';
 
 // Profile images import
 import imgPastor from "../../assets/23b6ea5c163050d8d7280dcdba4dd396a2a33a46.png";
@@ -394,7 +395,7 @@ export default function Home() {
             </div>
             )}
 
-            {bulletin?.adBannerEnabled && bulletin?.adBannerTitle && (
+            {bulletin?.adBannerEnabled && bulletin?.adBannerTitle && !isExpired(bulletin?.adBannerExpiryEnabled, bulletin?.adBannerExpiryAt) && (
                 <div className="max-w-md mx-auto px-4 pt-4">
                     <button
                         onClick={handleBannerClick}
