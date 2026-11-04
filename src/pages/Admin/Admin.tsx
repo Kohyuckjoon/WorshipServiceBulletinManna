@@ -2,9 +2,10 @@ import { useAdminData } from '../../hooks/useAdminData';
 import {
     Calendar, Plus, Trash2, LogOut, Lock, CheckCircle2,
     AlertCircle, CalendarDays, Edit3, BookOpen, User, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, RefreshCw,
-    MessageSquare, Quote, Eye, EyeOff, Check, Info, Music, Megaphone, Link2, Image
+    MessageSquare, Quote, Eye, EyeOff, Check, Info, Music, Megaphone, Link2, Image, ClipboardCheck
 } from "lucide-react";
 import LoginForm from './LoginForm';
+import AttendanceTab from './AttendanceTab';
 import ExpiryDatePicker from './ExpiryDatePicker';
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
@@ -846,54 +847,40 @@ export default function Admin() {
                 </div>
             </div> */}
 
-            <div className="max-w-2xl mx-auto px-4 mt-4 mb-4">
-                <div className="relative flex bg-[#EEEFf1] p-1 rounded-[18px] transition-all duration-500 ease-in-out">
-
-                    {/* 활성화된 탭 배경 (더 부드러운 이동과 쫀득한 그림자) */}
+            {/* 상단 탭: 모바일에서는 아이콘 위·글자 아래로 쌓아서 4칸에 글자가 넘치지 않게 */}
+            <div className="max-w-2xl mx-auto px-3 sm:px-4 mt-3 mb-3">
+                <div className="relative flex bg-[#EEEFF1] p-1 rounded-[18px]">
+                    {/* 활성화된 탭 배경 (탭 너비에 정확히 맞춰 이동) */}
                     <div
-                        className={`absolute top-1 bottom-1 w-[calc(33.333%-4px)] bg-white rounded-[14px] shadow-[0_4px_12px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.02)] transition-all duration-400 cubic-bezier(0.4, 0, 0.2, 1)
-                            ${activeTab === 'edit' ? 'left-1' : activeTab === 'leaders' ? 'left-[calc(33.333%)]' : 'left-[calc(66.666%)]'}`}
+                        className="absolute top-1 bottom-1 bg-white rounded-[14px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.03)] transition-[left] duration-300 ease-out"
+                        style={{
+                            width: 'calc((100% - 8px) / 4)',
+                            left: `calc(4px + ${['edit', 'leaders', 'attendance', 'history'].indexOf(activeTab)} * (100% - 8px) / 4)`,
+                        }}
                     />
-
-                    {/* 주보 편집 탭 */}
-                    <button
-                        onClick={() => setActiveTab('edit')}
-                        className={`relative flex-1 h-[44px] rounded-[14px] font-bold text-[12px] transition-all duration-300 flex items-center justify-center gap-0.5 z-10
-                            ${activeTab === 'edit'
-                                ? 'text-[#191F28]'
-                                : 'text-[#8B95A1] hover:text-[#505967]'}`}
-                    >
-                        <Edit3 size={14} strokeWidth={activeTab === 'edit' ? 2.5 : 2} />
-                        <span>주보 편집</span>
-                    </button>
-
-                    {/* 섬기는 사람들 탭 */}
-                    <button
-                        onClick={() => setActiveTab('leaders')}
-                        className={`relative flex-1 h-[44px] rounded-[14px] font-bold text-[12px] transition-all duration-300 flex items-center justify-center gap-0.5 z-10
-                            ${activeTab === 'leaders'
-                                ? 'text-[#191F28]'
-                                : 'text-[#8B95A1] hover:text-[#505967]'}`}
-                    >
-                        <User size={14} strokeWidth={activeTab === 'leaders' ? 2.5 : 2} />
-                        <span>섬기는 사람들</span>
-                    </button>
-
-                    {/* 주보 이력 탭 */}
-                    <button
-                        onClick={() => setActiveTab('history')}
-                        className={`relative flex-1 h-[44px] rounded-[14px] font-bold text-[12px] transition-all duration-300 flex items-center justify-center gap-0.5 z-10
-                            ${activeTab === 'history'
-                                ? 'text-[#191F28]'
-                                : 'text-[#8B95A1] hover:text-[#505967]'}`}
-                    >
-                        <CalendarDays size={14} strokeWidth={activeTab === 'history' ? 2.5 : 2} />
-                        <span>주보 이력</span>
-                    </button>
+                    {([
+                        ['edit', '주보 편집', Edit3],
+                        ['leaders', '섬기는 사람들', User],
+                        ['attendance', '출석부', ClipboardCheck],
+                        ['history', '주보 이력', CalendarDays],
+                    ] as const).map(([key, label, Icon]) => {
+                        const isActive = activeTab === key;
+                        return (
+                            <button
+                                key={key}
+                                onClick={() => setActiveTab(key)}
+                                className={`relative z-10 flex-1 min-w-0 h-[56px] sm:h-[48px] rounded-[14px] flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 transition-colors duration-200
+                                    ${isActive ? 'text-[#191F28]' : 'text-[#6B7684] hover:text-[#333D4B]'}`}
+                            >
+                                <Icon size={18} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-[#3182F6]' : ''} />
+                                <span className="text-[12px] sm:text-[14px] font-bold tracking-tight whitespace-nowrap leading-none">{label}</span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
-            <div className="max-w-2xl mx-auto px-5">
+            <div className={`max-w-2xl mx-auto ${activeTab === 'attendance' ? 'px-3 sm:px-5' : 'px-5'}`}>
                 {activeTab === 'edit' ? (
                     <div className="space-y-3 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-40">
 
@@ -2185,6 +2172,8 @@ export default function Admin() {
                             </button>
                         </div>
                     </div>
+                ) : activeTab === 'attendance' ? (
+                    <AttendanceTab user={user} />
                 ) : activeTab === 'leaders' ? (
                     <div className="space-y-3 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-20">
                         <p className="text-[12px] font-bold text-[#8B95A1] px-1 mb-1">추가·수정·삭제는 버튼을 누르는 즉시 저장돼요. 따로 발행 버튼을 누를 필요 없어요.</p>

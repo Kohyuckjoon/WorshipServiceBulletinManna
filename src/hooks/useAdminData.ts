@@ -98,7 +98,7 @@ export const useAdminData = () => {
     const [newQQuote, setNewQQuote] = useState("");
     const [newQContent, setNewQContent] = useState("");
 
-    const [activeTab, setActiveTab] = useState<'edit' | 'leaders' | 'history'>('edit');
+    const [activeTab, setActiveTab] = useState<'edit' | 'leaders' | 'attendance' | 'history'>('edit');
     const [worshipperConfession, setWorshipperConfession] = useState("");
     const [apostlesCreed, setApostlesCreed] = useState("");
     const [psalms, setPsalms] = useState("");
