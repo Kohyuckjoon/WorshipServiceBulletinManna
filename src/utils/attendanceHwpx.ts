@@ -94,14 +94,16 @@ export const formatRate = (attended: number, total: number) =>
 
 /** 선택한 날짜의 통계 (현재 명단에 있는 사람만 집계) */
 export const computeStats = (memberIds: string[], dayRecord: Record<string, string[]> | undefined) => {
-    let first = 0, second = 0, youth = 0;
+    // 예배별 인원은 각각 따로 셈 (2부+청년부 → 2부에도, 청년부에도 1명씩)
+    // 출석 인원·출석률은 사람 기준 (한 사람이 여러 예배에 와도 1명)
+    let first = 0, second = 0, youth = 0, attended = 0;
     for (const id of memberIds) {
-        const mark = markFor(dayRecord?.[id]);
-        if (mark === "1부") first++;
-        else if (mark === "2부") second++;
-        else if (mark === "o") youth++;
+        const services = dayRecord?.[id] ?? [];
+        if (services.includes("1부")) first++;
+        if (services.includes("2부")) second++;
+        if (services.includes("청년부")) youth++;
+        if (services.length > 0) attended++;
     }
-    const attended = first + second + youth;
     const total = memberIds.length;
     return { first, second, youth, attended, total, rate: formatRate(attended, total) };
 };
